@@ -19,3 +19,7 @@ gdscript/warnings/untyped_declaration=1
 gdscript/warnings/unsafe_property_access=1
 gdscript/warnings/unsafe_method_access=1
 gdscript/warnings/return_value_discarded=1
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/tattomoosa/editor-preview-control/plugin.cfg", "res://addons/tattomoosa/git_submodule_plugin/plugin.cfg")
