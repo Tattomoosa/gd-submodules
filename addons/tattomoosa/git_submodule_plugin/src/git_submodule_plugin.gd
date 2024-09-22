@@ -63,13 +63,8 @@ func _get_or_create_submodules_dir() -> DirAccess:
 		assert(err == OK)
 		var file := FileAccess.open(submodules_path.path_join(".gdignore"), FileAccess.WRITE)
 		file.store_buffer([])
+		dir = DirAccess.open(submodules_path)
 	return dir
-
-func _make_plugin_module_dir() -> int:
-	var dir := _get_or_create_submodules_dir()
-	if dir.dir_exists(repo):
-		return ERR_ALREADY_EXISTS
-	return dir.make_dir_recursive(repo)
 
 func _create(output : Array[String] = []) -> int:
 	var err : int
@@ -156,11 +151,13 @@ func _clone(output: Array[String] = []) -> int:
 	var err : int
 	var dir := _get_or_create_submodules_dir()
 	err = _make_plugin_module_dir()
-	assert(err == OK)
+	assert(err == OK or err == ERR_ALREADY_EXISTS)
 	err = dir.change_dir(repo)
 	assert(err == OK)
 	# git clone
+	# err = _execute_at(dir.get_current_dir(true), "pwd", output)
 	err = _execute_at(dir.get_current_dir(), "git clone %s ." % _upstream_url(), output)
+	push_error(output)
 	if err != OK:
 		push_error(error_string(err))
 	assert(err == OK)
@@ -184,10 +181,17 @@ func _get_plugin_module_path() -> String:
 func _get_submodules_path() -> String:
 	return "res://".path_join(submodules_root)
 
+func _make_plugin_module_dir() -> int:
+	var dir := _get_or_create_submodules_dir()
+	if dir.dir_exists(repo):
+		return ERR_ALREADY_EXISTS
+	return dir.make_dir_recursive(repo)
+
 func _upstream_url() -> String:
 	return "git@github.com:%s.git" % repo
 
 func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
+	path = ProjectSettings.globalize_path(path)
 	push_warning('"cd \"%s\" && \"%s\""' % [path, cmd])
 	return OS.execute(
 		"$SHELL",
