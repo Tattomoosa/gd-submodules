@@ -139,7 +139,7 @@ func _symlink() -> int:
 			push_warning(error_string(err))
 	return OK
 
-# only one find deep, ignore nested plugin.cfg - they will be included by the symlink
+# only one find deep, ignoring nested plugin.cfg - they will be included by the symlink
 func _find_plugin_cfgs(path: String) -> Array[String]:
 	var dir := DirAccess.open(path)
 	for file in dir.get_files():
