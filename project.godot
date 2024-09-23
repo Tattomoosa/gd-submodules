@@ -11,6 +11,11 @@ config_version=5
 [application]
 
 config/features=PackedStringArray("4.3")
+config/git_sha="7b80ed0a49b7f5e6f98b20704548400623728aa5"
+
+[autoload]
+
+GLogging="*res://addons/glogging/glogging.gd"
 
 [debug]
 
@@ -22,4 +27,4 @@ gdscript/warnings/return_value_discarded=1
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/explore-editor-theme/plugin.cfg", "res://addons/tattomoosa.editor-control-preview/plugin.cfg", "res://addons/tattomoosa.vision_cone_3d/plugin.cfg", "res://addons/tattomoosa/git_submodule_plugin/plugin.cfg")
+enabled=PackedStringArray("res://addons/aspect_ratio_resize_container/plugin.cfg", "res://addons/custom_theme_overrides/plugin.cfg", "res://addons/explore-editor-theme/plugin.cfg", "res://addons/git_sha_project_setting/plugin.cfg", "res://addons/glogging/plugin.cfg", "res://addons/hide_private_properties/plugin.cfg", "res://addons/icon_explorer/plugin.cfg", "res://addons/icons_patcher/plugin.cfg", "res://addons/kenyoni/plugin_reloader/plugin.cfg", "res://addons/licenses/plugin.cfg", "res://addons/qr_code/plugin.cfg", "res://addons/tattomoosa.editor-control-preview/plugin.cfg", "res://addons/tattomoosa.vision_cone_3d/plugin.cfg", "res://addons/tattomoosa/git_submodule_plugin/plugin.cfg", "res://addons/texture_button_colored/plugin.cfg")

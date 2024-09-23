@@ -146,26 +146,49 @@ func init(output : Array[String] = []) -> int:
 	return err
 
 func symlink() -> Error:
-	var repo_dir := DirAccess.open(get_submodule_path().path_join("addons"))
-	var project_plugin_resource_path := _get_plugin_res_path()
-	var plugin_roots := find_plugin_roots()
+	var plugin_roots := find_plugin_submodule_roots()
 	print(plugin_roots)
 	for root in plugin_roots:
-		print_debug("Found plugin root:\n", root, "\n", project_plugin_resource_path)
-		var relative_root := root.replace(repo_dir.get_current_dir(), "")
-		var project_install_path := "res://addons".path_join(relative_root)
-		var err := repo_dir.create_link(root, project_install_path)
-		if (err != OK and err != ERR_ALREADY_EXISTS):
-			push_warning("Could not create symlink at %s" % project_install_path, error_string(err))
+		var err := symlink_plugin(root)
+		if err != OK and err != ERR_ALREADY_EXISTS:
+			push_error(error_string(err))
 	status = Status.LINKED
 	return OK
+
+func symlink_plugin(plugin_root: String) -> Error:
+	var repo_dir := DirAccess.open(get_submodule_path().path_join("addons"))
+	var relative_root := plugin_root.replace(repo_dir.get_current_dir(), "")
+	var project_install_path := "res://addons".path_join(relative_root)
+	var root_folder_name := relative_root.split("/")[-1]
+	var mkdirs := project_install_path.replace(root_folder_name, "")
+	var err := DirAccess.make_dir_recursive_absolute(mkdirs)
+	if err != OK:
+		push_error("Failed to create directories along path: ", mkdirs)
+
+	err = repo_dir.create_link(plugin_root, project_install_path)
+	if err != OK and err != ERR_ALREADY_EXISTS:
+		push_warning(
+			"Could not create symlink: %s %s - " % [plugin_root, project_install_path], error_string(err))
+	return err
 
 ## Find plugin roots, or any directory with a present plugin.cfg
 ## Only looks one plugin.cfg deep, ignores nested ones,
 ## they would be included by the symlink anyway
-func find_plugin_roots() -> Array[String]:
+func find_plugin_submodule_roots() -> Array[String]:
 	var plugin_addons_path := get_submodule_path().path_join("addons")
 	return _find_plugin_roots(plugin_addons_path)
+
+func find_project_plugin_roots() -> Array[String]:
+	var submodule_plugin_roots := find_plugin_submodule_roots()
+	var project_roots : Array[String] = []
+	for root in submodule_plugin_roots:
+		project_roots.append(convert_submodule_path_to_project_path(root))
+	return project_roots
+
+func convert_submodule_path_to_project_path(path: String) -> String:
+	var relative := path.erase(0, path.find("/addons/") + 8)
+	var project_path := "res://addons/".path_join(relative)
+	return project_path
 
 func _find_plugin_roots(path: String) -> Array[String]:
 	if !is_tracked:
@@ -184,21 +207,21 @@ func _find_plugin_roots(path: String) -> Array[String]:
 	return cfg_paths
 
 func get_all_plugin_configs() -> Array[ConfigFile]:
-	var roots := find_plugin_roots()
+	var roots := find_plugin_submodule_roots()
 	var arr : Array[ConfigFile]
 	for i in roots.size():
 		arr.push_back(get_config(i))
 	return arr
 
 func get_config(root_index := 0) -> ConfigFile:
-	var plugin_cfgs := find_plugin_roots()
+	var plugin_cfgs := find_plugin_submodule_roots()
 	var cfg0_path := plugin_cfgs[root_index].path_join("plugin.cfg")
 	var cf := ConfigFile.new()
 	var err := cf.load(cfg0_path)
 	if err != OK:
 		push_warning("Failed to load config from path " + cfg0_path + " ", error_string(err))
 		return null
-	print_debug("Loaded config from path " + cfg0_path)
+	# print_debug("Loaded config from path " + cfg0_path)
 	return cf
 
 func get_version_string() -> String:
@@ -240,40 +263,77 @@ func remove() -> Error:
 	return err
 
 func remove_from_project() -> Error:
-	var dir := DirAccess.open(_get_plugin_res_path())
-	push_warning(dir.get_files())
-	if "plugin.cfg" in dir.get_files():
-		var err := DirAccess.remove_absolute(dir.get_current_dir())
-		assert(err == OK)
-		status = Status.TRACKED
-		return err
-	push_error("plugin.cfg not found at %s" % _get_plugin_res_path())
-	return ERR_FILE_BAD_PATH
+	var err := OK
+	for submodule_roots in find_plugin_submodule_roots():
+		var root_dir_name := submodule_roots.split("/")[-1]
+		# var path := project_plugin_path_from_root_dir_name(root_dir_name)
+		var err0 := remove_plugin_from_project(root_dir_name)
+		if err0 != OK:
+			err = err0
+			push_error(error_string(err0))
+	status = Status.TRACKED
+	return err
 
-func remove_submodule() -> Error:
+func remove_plugin_from_project(plugin_root_dir_name: String) -> Error:
+	var path := project_plugin_path_from_root_dir_name(plugin_root_dir_name)
+	if path:
+		if !DirAccess.dir_exists_absolute(path):
+			return ERR_DOES_NOT_EXIST
+		var err := DirAccess.remove_absolute(path)
+		return err
+	if !has_any_plugins_in_project():
+		status = Status.TRACKED
+	return ERR_CANT_RESOLVE
+
+func has_plugin_in_project(plugin_root_dir_name: String) -> bool:
+	var path := project_plugin_path_from_root_dir_name(plugin_root_dir_name)
+	return DirAccess.dir_exists_absolute(path)
+
+func has_all_plugins_in_project() -> bool:
+	var plugin_roots := find_plugin_submodule_roots()
+	for root in plugin_roots:
+		if !has_plugin_in_project(root.split("/")[-1]):
+		# if !has_plugin_in_project(root.get_slice("/addons/", 1)):
+			return false
+	return true
+
+func has_any_plugins_in_project() -> bool:
+	var plugin_roots := find_plugin_submodule_roots()
+	for root in plugin_roots:
+		if has_plugin_in_project(root.split("/")[-1]):
+			return true
+	return false
+
+func project_plugin_path_from_root_dir_name(plugin_root_dir_name: String) -> String:
+	var plugin_roots := find_project_plugin_roots()
+	var plugin_root : String = ""
+	for p in plugin_roots:
+		if p.ends_with(plugin_root_dir_name):
+			plugin_root = p
+	return plugin_root
+
+func remove_submodule(output: Array[String] = []) -> Error:
 	var dir := DirAccess.open(get_submodule_path())
-	push_warning(dir)
+	# push_warning(dir)
 	if !dir:
 		return ERR_CANT_OPEN
 	dir.include_hidden = true
-	push_warning(dir.get_directories())
+	# push_warning(dir.get_directories())
 	if ".git" in dir.get_directories():
-		push_warning(dir.get_current_dir())
-		var output : Array[String] = []
+		# push_warning(dir.get_current_dir())
 		var err0 := dir.change_dir("..")
 		assert(err0 == OK)
 		var os_err := _execute_at(dir.get_current_dir(), "rm -rf %s" % repo_name, output)
 		if os_err == OK:
 			status = Status.NOT_TRACKED
 			return OK
-		push_error(output)
 		return FAILED
 	push_warning(".git not found")
 	return ERR_FILE_BAD_PATH
 
 func _get_plugin_res_path() -> String:
 	var plugin_addons_path := get_submodule_path().path_join("addons")
-	var cfg_path : String = find_plugin_roots()[0]
+	var cfg_path : String = find_plugin_submodule_roots()[0]
 	var rel_path := cfg_path.replace(plugin_addons_path, "")
 	return "res://addons/%s" % rel_path
 	# return "res://addons/%s" % repo.to_lower()
@@ -295,7 +355,7 @@ func _upstream_url() -> String:
 
 func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
-	print_debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
+	# print_debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
 	return OS.execute(
 		"$SHELL",
 		[
@@ -310,7 +370,7 @@ func _determine_status() -> void:
 		status = Status.NOT_TRACKED
 		return
 	var exists_in_git := DirAccess.dir_exists_absolute(get_submodule_path().path_join(".git"))
-	var exists_in_project := DirAccess.dir_exists_absolute(_get_plugin_res_path())
+	var exists_in_project := has_any_plugins_in_project()
 	if exists_in_git and exists_in_project:
 		status = Status.LINKED
 		return
@@ -355,15 +415,15 @@ func is_tracked() -> bool:
 	return status == Status.TRACKED or status == Status.LINKED
 
 func is_linked() -> bool:
-	return status == Status.LINKED
+	return has_any_plugins_in_project()
 
 func get_enabled_plugin_roots() -> Array[String]:
 	var enabled : Array[String] = []
-	var roots := find_plugin_roots()
+	var roots := find_plugin_submodule_roots()
 	for i in roots.size():
 		var root := roots[i]
-		var folder_name := root.split("/")[-1]
-		push_warning(folder_name)
+		# var folder_name := root.split("/")[-1]
+		var folder_name := root.get_slice("/addons/", 1)
 		if EditorInterface.is_plugin_enabled(folder_name):
 			enabled.push_back(root)
 	return enabled
