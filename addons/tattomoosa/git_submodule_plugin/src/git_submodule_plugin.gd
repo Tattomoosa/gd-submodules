@@ -26,6 +26,7 @@ const SUBMODULES_ROOT := "submodules/"
 var status : Status:
 	set(value):
 		status = value
+		print("EMITTING STATUS ", status)
 		match status:
 			Status.TRACKED: tracked.emit()
 			Status.NOT_TRACKED: not_tracked.emit()
