@@ -2,9 +2,9 @@
 extends Node
 
 signal repo_loaded(repo: String)
-signal not_tracked
-signal tracked
-signal linked
+# signal not_tracked
+# signal tracked
+# signal linked
 
 enum Status {
 	NOT_TRACKED,
@@ -26,11 +26,10 @@ const SUBMODULES_ROOT := "submodules/"
 var status : Status:
 	set(value):
 		status = value
-		print("EMITTING STATUS ", status)
-		match status:
-			Status.TRACKED: tracked.emit()
-			Status.NOT_TRACKED: not_tracked.emit()
-			Status.LINKED: linked.emit()
+		# match status:
+		# 	Status.TRACKED: tracked.emit()
+		# 	Status.NOT_TRACKED: not_tracked.emit()
+		# 	Status.LINKED: linked.emit()
 
 var plugin_cfg_contents := """\
 [plugin]

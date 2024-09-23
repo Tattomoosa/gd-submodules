@@ -70,19 +70,29 @@ func _ready() -> void:
 	set_column_title(Column.EDIT, "Edit")
 	set_column_expand(Column.EDIT, false)
 
-	# for i in columns:
-		# set_column_title(i, "")
-
-	item_edited.connect(_item_edited)
-
 	for c in columns:
 		set_column_title_alignment(c, HORIZONTAL_ALIGNMENT_LEFT)
 
-	# reset()
 	await _set_working()
 	build()
 	_set_finished()
+
+	button_clicked.connect(_button_clicked)
+	item_edited.connect(_item_edited)
 	visibility_changed.connect(_on_visibility_changed)
+
+func _button_clicked(item: TreeItem, col: int, id: int, mouse_button_index: int):
+	if mouse_button_index != MOUSE_BUTTON_LEFT:
+		return
+
+	if col != Column.EDIT:
+		push_error("What button at %s?" % col)
+
+	if col == Column.EDIT:
+		print("COLUMN EDIT")
+		item.set_editable(Column.BRANCH, true)
+		item.set_editable(Column.COMMIT, true)
+		return
 
 func _on_visibility_changed() -> void:
 	var root := get_root()
@@ -90,14 +100,15 @@ func _on_visibility_changed() -> void:
 		return
 	_set_working()
 	for child in root.get_children():
-		await _update_submodule_checks(child)
+		_update_submodule_checks(child)
 	_set_finished()
 
 func _set_working() -> void:
 	working.emit()
 	# TODO why do we have to wait 2 frames just to get the status indicator up?
 	# Shouldn't it only need one?
-	for i in 2: await get_tree().process_frame
+	for i in 2:
+		await get_tree().process_frame
 
 func _set_finished() -> void:
 	finished.emit()
@@ -113,12 +124,6 @@ func _item_edited() -> void:
 	if data is GitSubmodulePlugin:
 		var err := OK
 		var submodule : GitSubmodulePlugin = data
-
-		if col == Column.EDIT:
-			print("COLUMN EDIT")
-			item.set_editable(Column.BRANCH, true)
-			item.set_editable(Column.COMMIT, true)
-			return
 
 		match col:
 			Column.TRACKED:
@@ -143,7 +148,7 @@ func _item_edited() -> void:
 					_set_all_submodule_plugins_enabled(submodule, checked)
 		if err != OK:
 			push_warning(error_string(err))
-		await _update_submodule_checks(item)
+		_update_submodule_checks.call_deferred(item)
 
 	# TODO better naming, typing
 	# GitSubmodulePlugin should be just GitSubmodule?
@@ -154,7 +159,7 @@ func _item_edited() -> void:
 		var submodule : GitSubmodulePlugin = item.get_parent().get_metadata(0)
 		var err : Error
 
-		await _set_working()
+		_set_working()
 		match col:
 			Column.LINKED:
 				if checked:
@@ -169,7 +174,7 @@ func _item_edited() -> void:
 
 		if err != OK:
 			push_warning(error_string(err))
-		await _update_submodule_checks(item.get_parent())
+		_update_submodule_checks.call_deferred(item.get_parent())
 
 	_set_finished()
 
@@ -213,26 +218,21 @@ func build() -> void:
 func build_submodule_tree_item(item: TreeItem) -> void:
 	var submodule : GitSubmodulePlugin = item.get_metadata(0)
 	var submodule_plugins := submodule.find_plugin_submodule_roots()
-
 	var c := Column.BLANK
+
 	item.set_selectable(c, false)
 	item.set_cell_mode(c, TreeItem.CELL_MODE_CUSTOM)
 
-	c = Column.TRACKED
-	item.set_cell_mode(c, TreeItem.CELL_MODE_CHECK)
-	item.set_icon(c, GIT_ICON)
-	item.set_icon_max_width(c, 16 * EditorInterface.get_editor_scale())
+	var icon_scale := 16 * EditorInterface.get_editor_scale()
+	for c_i: int in [Column.TRACKED, Column.LINKED, Column.ACTIVE]:
+		item.set_cell_mode(c_i, TreeItem.CELL_MODE_CHECK)
+		item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_CENTER)
 
-	c = Column.LINKED
-	item.set_icon_max_width(c, 16 * EditorInterface.get_editor_scale())
-	item.set_cell_mode(c, TreeItem.CELL_MODE_CHECK)
-	item.set_icon(c, get_theme_icon("Load", "EditorIcons"))
-	item.set_icon_max_width(c, 16 * EditorInterface.get_editor_scale())
+	item.set_icon(Column.TRACKED, GIT_ICON)
+	item.set_icon_max_width(Column.TRACKED, icon_scale)
+	item.set_icon(Column.LINKED, get_theme_icon("Load", "EditorIcons"))
+	item.set_icon_max_width(Column.LINKED, icon_scale)
 
-	c = Column.ACTIVE
-	item.set_cell_mode(c, TreeItem.CELL_MODE_CHECK)
-	item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_CENTER)
-	item.set_icon_max_width(c, 16 * EditorInterface.get_editor_scale())
 
 	item.set_text(Column.REPO, submodule.repo)
 	item.set_text(Column.BRANCH, submodule.branch_name())
@@ -305,11 +305,11 @@ func build_submodule_tree_item(item: TreeItem) -> void:
 		# 	config_item.set_custom_bg_color(c_i, config_item_color)
 	item.set_tooltip_text(c, "\n\n".join(config_texts))
 
-	await _update_submodule_checks(item)
+	_update_submodule_checks(item)
 
 @warning_ignore("narrowing_conversion")
 func _update_submodule_checks(item: TreeItem) -> void:
-	await get_tree().process_frame
+	# await get_tree().process_frame
 	var submodule : GitSubmodulePlugin = item.get_metadata(0)
 	var submodule_plugins := submodule.find_plugin_submodule_roots()
 	var submodule_enabled_plugins := submodule.get_enabled_plugin_roots()

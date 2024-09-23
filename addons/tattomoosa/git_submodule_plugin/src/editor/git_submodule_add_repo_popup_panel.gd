@@ -29,6 +29,32 @@ var origin_urls := {
 func _ready() -> void:
 	about_to_popup.connect(reset)
 	output.add_theme_font_override("normal_font", get_theme_font("output_source_mono", "EditorFonts"))
+	repo_edit.text_changed.connect(_on_edit_changed.unbind(1))
+	branch_edit.text_changed.connect(_on_edit_changed.unbind(1))
+	commit_edit.text_changed.connect(_on_edit_changed.unbind(1))
+	_on_edit_changed()
+
+func _on_edit_changed() -> void:
+	var color := get_theme_color("font_disabled_color", "Editor")
+	var color_tag := "[color=#%s]" % color.to_html()
+
+	var repo_text := repo_edit.text
+	if repo_text == "":
+		repo_text = color_tag + "%s[/color]" % "{author}/{repo}"
+
+	var branch_text := branch_edit.text
+	if branch_text != "":
+		branch_text = "-b [/color]%s%s " % [branch_text, color_tag]
+
+	var commit_text := commit_edit.text
+
+	output.text = color_tag\
+			+ "git clone "\
+			+ branch_text\
+			+ (get_origin_string()\
+			% ("[/color]" + repo_text + color_tag))\
+			+ "[/color] "\
+			+ commit_text # +\
 
 func reset() -> void:
 	repo_edit.clear()
