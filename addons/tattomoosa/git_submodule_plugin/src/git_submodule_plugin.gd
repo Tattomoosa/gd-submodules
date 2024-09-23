@@ -211,18 +211,20 @@ func clone(output: Array[String] = []) -> Error:
 	var os_err : int
 	var dir := _get_or_create_submodules_dir()
 	err = _make_plugin_module_dir()
-	assert(err == OK or err == ERR_ALREADY_EXISTS)
+	if !(err == OK or err == ERR_ALREADY_EXISTS):
+		return err
 	err = dir.change_dir(repo)
-	assert(err == OK)
+	if err != OK:
+		return err
 	# git clone
 	# err = _execute_at(dir.get_current_dir(true), "pwd", output)
 	os_err = _execute_at(dir.get_current_dir(), "git clone %s ." % _upstream_url(), output)
 	if os_err != OK:
 		push_error(output)
 		return FAILED
-	assert(err == OK)
 	status = Status.TRACKED
-	return symlink()
+	return err
+	# return symlink()
 
 func remove() -> Error:
 	if !repo:
