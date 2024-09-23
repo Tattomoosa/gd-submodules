@@ -1,6 +1,6 @@
+# Normalize EOL for all files that Git considers text files.
+* text=auto eol=lf
 # Addon store download only includes addons folder
 /**        export-ignore
 /addons    !export-ignore
 /addons/** !export-ignore
-# Normalize EOL for all files that Git considers text files.
-* text=auto eol=lf

@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://addons/tattomoosa/git_submodule_plugin/src/editor/git_submodule_plugin_settings.gd" id="1_cogpm"]
 [ext_resource type="PackedScene" uid="uid://ytilv01f7rgb" path="res://addons/tattomoosa/git_submodule_plugin/src/editor/git_submodule_plugin_form.tscn" id="1_o4mip"]
 
-[node name="GitSubmodulePlugins" type="PanelContainer"]
+[node name="Submodule Plugins" type="PanelContainer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

@@ -135,40 +135,80 @@ func init(output : Array[String] = []) -> int:
 	err = DirAccess.make_dir_absolute("res://addons/%s" % author.to_lower())
 	assert(err == OK or err == ERR_ALREADY_EXISTS)
 	# make resource addon link
-	push_warning(dir.get_current_dir())
-	var symlink_dest := _get_plugin_res_path()
-	push_warning(symlink_dest)
-	err = dir.create_link(dir.get_current_dir(), symlink_dest)
+	# print_debug(dir.get_current_dir())
+	# var symlink_dest := _get_plugin_res_path()
+	# print_debug(symlink_dest)
+	# err = dir.create_link(dir.get_current_dir(), symlink_dest)
+	err = symlink()
 	assert(err == OK)
-	status = Status.LINKED
+	# status = Status.LINKED
 	return err
 
-func symlink() -> int:
-	var repo_dir := DirAccess.open(_get_plugin_module_path().path_join("addons"))
+func symlink() -> Error:
+	var repo_dir := DirAccess.open(get_submodule_path().path_join("addons"))
 	var project_plugin_resource_path := _get_plugin_res_path()
-	var plugin_roots := _find_plugin_cfgs(repo_dir.get_current_dir())
+	var plugin_roots := find_plugin_roots()
 	print(plugin_roots)
 	for root in plugin_roots:
-		var err := repo_dir.create_link(root, project_plugin_resource_path)
-		push_warning(root, ", ", project_plugin_resource_path)
+		print_debug("Found plugin root:\n", root, "\n", project_plugin_resource_path)
+		var relative_root := root.replace(repo_dir.get_current_dir(), "")
+		var project_install_path := "res://addons".path_join(relative_root)
+		var err := repo_dir.create_link(root, project_install_path)
 		if (err != OK and err != ERR_ALREADY_EXISTS):
-			push_warning(error_string(err))
+			push_warning("Could not create symlink at %s" % project_install_path, error_string(err))
 	status = Status.LINKED
 	return OK
 
-# only one find deep, ignoring nested plugin.cfg - they will be included by the symlink
-func _find_plugin_cfgs(path: String) -> Array[String]:
+## Find plugin roots, or any directory with a present plugin.cfg
+## Only looks one plugin.cfg deep, ignores nested ones,
+## they would be included by the symlink anyway
+func find_plugin_roots() -> Array[String]:
+	var plugin_addons_path := get_submodule_path().path_join("addons")
+	return _find_plugin_roots(plugin_addons_path)
+
+func _find_plugin_roots(path: String) -> Array[String]:
+	if !is_tracked:
+		push_error("Repo must be in tracked state (cloned locally) to find plugin roots")
+		return []
 	var dir := DirAccess.open(path)
+	if !dir:
+		push_error("Plugin root not found")
+		return []
 	for file in dir.get_files():
 		if file.ends_with("plugin.cfg"):
 			return [path]
 	var cfg_paths : Array[String] = []
 	for d in dir.get_directories():
-		cfg_paths.append_array(_find_plugin_cfgs(path.path_join(d)))
+		cfg_paths.append_array(_find_plugin_roots(path.path_join(d)))
 	return cfg_paths
 
-func clone(output: Array[String] = []) -> int:
-	var err : int
+func get_all_plugin_configs() -> Array[ConfigFile]:
+	var roots := find_plugin_roots()
+	var arr : Array[ConfigFile]
+	for i in roots.size():
+		arr.push_back(get_config(i))
+	return arr
+
+func get_config(root_index := 0) -> ConfigFile:
+	var plugin_cfgs := find_plugin_roots()
+	var cfg0_path := plugin_cfgs[root_index].path_join("plugin.cfg")
+	var cf := ConfigFile.new()
+	var err := cf.load(cfg0_path)
+	if err != OK:
+		push_warning("Failed to load config from path " + cfg0_path + " ", error_string(err))
+		return null
+	print_debug("Loaded config from path " + cfg0_path)
+	return cf
+
+func get_version_string() -> String:
+	var cf := get_config()
+	if !cf:
+		return ""
+	return cf.get_value("plugin", "version", "")
+
+func clone(output: Array[String] = []) -> Error:
+	var err : Error
+	var os_err : int
 	var dir := _get_or_create_submodules_dir()
 	err = _make_plugin_module_dir()
 	assert(err == OK or err == ERR_ALREADY_EXISTS)
@@ -176,15 +216,15 @@ func clone(output: Array[String] = []) -> int:
 	assert(err == OK)
 	# git clone
 	# err = _execute_at(dir.get_current_dir(true), "pwd", output)
-	err = _execute_at(dir.get_current_dir(), "git clone %s ." % _upstream_url(), output)
-	push_error(output)
-	if err != OK:
-		push_error(error_string(err))
+	os_err = _execute_at(dir.get_current_dir(), "git clone %s ." % _upstream_url(), output)
+	if os_err != OK:
+		push_error(output)
+		return FAILED
 	assert(err == OK)
 	status = Status.TRACKED
 	return symlink()
 
-func remove() -> int:
+func remove() -> Error:
 	if !repo:
 		return ERR_INVALID_DATA
 	var err := remove_from_project()
@@ -196,7 +236,7 @@ func remove() -> int:
 	assert(err == OK)
 	return err
 
-func remove_from_project() -> int:
+func remove_from_project() -> Error:
 	var dir := DirAccess.open(_get_plugin_res_path())
 	push_warning(dir.get_files())
 	if "plugin.cfg" in dir.get_files():
@@ -207,8 +247,8 @@ func remove_from_project() -> int:
 	push_error("plugin.cfg not found at %s" % _get_plugin_res_path())
 	return ERR_FILE_BAD_PATH
 
-func remove_submodule() -> int:
-	var dir := DirAccess.open(_get_plugin_module_path())
+func remove_submodule() -> Error:
+	var dir := DirAccess.open(get_submodule_path())
 	push_warning(dir)
 	if !dir:
 		return ERR_CANT_OPEN
@@ -219,24 +259,29 @@ func remove_submodule() -> int:
 		var output : Array[String] = []
 		var err0 := dir.change_dir("..")
 		assert(err0 == OK)
-		var err := _execute_at(dir.get_current_dir(), "rm -rf %s" % repo_name, output)
-		push_warning(output)
-		if err == OK:
+		var os_err := _execute_at(dir.get_current_dir(), "rm -rf %s" % repo_name, output)
+		if os_err == OK:
 			status = Status.NOT_TRACKED
-		return err
+			return OK
+		push_error(output)
+		return FAILED
 	push_warning(".git not found")
 	return ERR_FILE_BAD_PATH
 
 func _get_plugin_res_path() -> String:
-	return "res://addons/%s" % repo.to_lower()
+	var plugin_addons_path := get_submodule_path().path_join("addons")
+	var cfg_path : String = find_plugin_roots()[0]
+	var rel_path := cfg_path.replace(plugin_addons_path, "")
+	return "res://addons/%s" % rel_path
+	# return "res://addons/%s" % repo.to_lower()
 
-func _get_plugin_module_path() -> String:
-	return get_submodules_path().path_join(repo.to_lower())
+func get_submodule_path() -> String:
+	return get_submodules_root_path().path_join(repo.to_lower())
 
-static func get_submodules_path() -> String:
+static func get_submodules_root_path() -> String:
 	return "res://".path_join(SUBMODULES_ROOT)
 
-func _make_plugin_module_dir() -> int:
+func _make_plugin_module_dir() -> Error:
 	var dir := _get_or_create_submodules_dir()
 	if dir.dir_exists(repo):
 		return ERR_ALREADY_EXISTS
@@ -247,7 +292,7 @@ func _upstream_url() -> String:
 
 func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
-	push_warning('cd \"%s\" && \"%s\"' % [path, cmd])
+	print_debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
 	return OS.execute(
 		"$SHELL",
 		[
@@ -261,7 +306,7 @@ func _determine_status() -> void:
 	if !repo:
 		status = Status.NOT_TRACKED
 		return
-	var exists_in_git := DirAccess.dir_exists_absolute(_get_plugin_module_path().path_join(".git"))
+	var exists_in_git := DirAccess.dir_exists_absolute(get_submodule_path().path_join(".git"))
 	var exists_in_project := DirAccess.dir_exists_absolute(_get_plugin_res_path())
 	if exists_in_git and exists_in_project:
 		status = Status.LINKED
@@ -273,14 +318,49 @@ func _determine_status() -> void:
 	return
 
 static func get_tracked_repos() -> Array[String]:
-	return _get_tracked_repos(get_submodules_path())
+	return _get_tracked_repos(get_submodules_root_path())
 
 static func _get_tracked_repos(path: String) -> Array[String]:
 	var dir := DirAccess.open(path)
 	dir.include_hidden = true
 	if ".git" in dir.get_directories():
-		return [dir.get_current_dir().replace(get_submodules_path(), "")]
+		return [dir.get_current_dir().replace(get_submodules_root_path(), "")]
 	var git_dirs : Array[String] = []
 	for d in dir.get_directories():
 		git_dirs.append_array(_get_tracked_repos(path.path_join(d)))
 	return git_dirs
+
+func commit_hash(short := true) -> String:
+	var submodule_root := get_submodule_path()
+	var short_arg := "--short" if short else ""
+	var output : Array[String] = []
+	var err := _execute_at(submodule_root, "git rev-parse %s HEAD" % short_arg, output)
+	if err != OK:
+		return ""
+	return output[0]
+
+func branch_name() -> String:
+	# git symbolic-ref --short HEAD
+	var submodule_root := get_submodule_path()
+	var output : Array[String] = []
+	var err := _execute_at(submodule_root, "git symbolic-ref --short HEAD", output)
+	if err != OK:
+		return ""
+	return output[0]
+
+func is_tracked() -> bool:
+	return status == Status.TRACKED or status == Status.LINKED
+
+func is_linked() -> bool:
+	return status == Status.LINKED
+
+func get_enabled_plugin_roots() -> Array[String]:
+	var enabled : Array[String] = []
+	var roots := find_plugin_roots()
+	for i in roots.size():
+		var root := roots[i]
+		var folder_name := root.split("/")[-1]
+		push_warning(folder_name)
+		if EditorInterface.is_plugin_enabled(folder_name):
+			enabled.push_back(root)
+	return enabled
