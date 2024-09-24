@@ -32,10 +32,12 @@ const GitSubmodulePlugin := preload("../git_submodule_plugin.gd")
 var submodules : Array[GitSubmodulePlugin]
 
 func reset() -> void:
+	await _set_working()
 	for child in get_root().get_children():
 		get_root().remove_child(child)
 	submodules.clear()
 	build()
+	_set_finished()
 
 func build() -> void:
 	var root := get_root()
@@ -90,7 +92,7 @@ func _ready() -> void:
 		set_column_title_alignment(c, HORIZONTAL_ALIGNMENT_LEFT)
 
 	await _set_working()
-	build()
+	build.call_deferred()
 	_set_finished()
 
 	button_clicked.connect(_button_clicked)
@@ -111,13 +113,11 @@ func _button_clicked(item: TreeItem, col: int, _id: int, mouse_button_index: int
 		return
 
 func _on_visibility_changed() -> void:
-	var root := get_root()
-	if !visible or !root:
+	if !is_visible_in_tree():
 		return
-	_set_working()
-	for child in root.get_children():
-		_update_submodule_checks(child)
-	_set_finished()
+	var root := get_root()
+	if !root:
+		push_error("Visibility changed - Tree has no root")
 
 func _set_working() -> void:
 	working.emit()
@@ -160,7 +160,6 @@ func _item_edited() -> void:
 				if indeterminate:
 					checked = false
 				if submodule.is_linked():
-					push_warning(checked)
 					_set_all_submodule_plugins_enabled(submodule, checked)
 		if err != OK:
 			push_warning(error_string(err))
@@ -179,10 +178,8 @@ func _item_edited() -> void:
 		match col:
 			Column.LINKED:
 				if checked:
-					push_warning("LINKED CHECKED: PLUGIN ROOT ", plugin_root)
 					err = submodule.symlink_plugin(plugin_root)
 				else:
-					push_warning("LINKED UNCHECKED: PLUGIN ROOT ", plugin_root)
 					err = submodule.remove_plugin_from_project(plugin_root.split("/")[-1])
 				EditorInterface.get_resource_filesystem().scan()
 			Column.ACTIVE:
@@ -233,7 +230,7 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 		var plugin_item := item.create_child()
 		var cfg_file := submodule.get_config(i)
 		var plugin_submodule_path := submodule_plugins[i]
-		var relative_path := submodule.get_plugin_root_relative_to_addons(plugin_submodule_path)
+		var relative_path := GitSubmodulePlugin.get_plugin_root_relative_to_addons(plugin_submodule_path)
 		var project_absolute_path := "res://addons/".path_join(relative_path)
 		var plugin_name : String = cfg_file.get_value("plugin", "name", "")
 		var version : String = cfg_file.get_value("plugin", "version", "")
@@ -346,7 +343,7 @@ func _update_submodule_checks(item: TreeItem) -> void:
 
 	for i in submodule_plugins.size():
 		var plugin_submodule_path := submodule_plugins[i]
-		var relative_path := submodule.get_plugin_root_relative_to_addons(plugin_submodule_path)
+		var relative_path := GitSubmodulePlugin.get_plugin_root_relative_to_addons(plugin_submodule_path)
 		var plugin_item := item.get_child(i)
 		var folder_root_name := plugin_submodule_path.split("/")[-1]
 		var is_linked := submodule.has_plugin_in_project(folder_root_name)

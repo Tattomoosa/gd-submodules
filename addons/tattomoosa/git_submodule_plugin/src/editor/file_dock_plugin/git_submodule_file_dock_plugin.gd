@@ -1,6 +1,8 @@
 @tool
 extends Control
 
+const PRINT_DEBUG_MESSAGES := false
+const PRINT_PREFIX := "[GitSubmoduleFileDockPlugin] "
 const FADE_COLOR := Color(1, 1, 1, 0.4)
 const GIT_ICON := preload("../../../icons/Git.svg")
 const GitSubmodulePlugin := preload("../../git_submodule_plugin.gd")
@@ -8,7 +10,7 @@ const GitSubmodulePlugin := preload("../../git_submodule_plugin.gd")
 var file_system_dock : FileSystemDock
 var file_tree : Tree
 var active := true
-var mouse_inside := true
+var mouse_inside := false
 
 var plugin_icon : Texture2D
 var git_icon : Texture2D
@@ -18,10 +20,14 @@ func _ready() -> void:
 
 @warning_ignore("return_value_discarded")
 func initialize() -> void:
+	_print_debug("Initializing GitSubmoduleFileDockPlugin")
 	git_icon = _resize_icon(GIT_ICON.get_image())
 	EditorInterface.get_editor_main_screen().add_child(self)
 	file_tree = _find_file_tree()
+	if !file_tree:
+		push_error(PRINT_PREFIX, "File tree not found.")
 	if !file_tree.is_node_ready():
+		_print_debug("awaiting file tree.ready")
 		await file_tree.ready
 	patch_dock()
 	EditorInterface.get_resource_filesystem().filesystem_changed.connect(patch_dock)
@@ -36,31 +42,48 @@ func initialize() -> void:
 	file_system_dock.inherit.connect(patch_dock.unbind(1))
 	file_system_dock.instantiate.connect(patch_dock.unbind(1))
 	# file_system_dock.resource_removed.connect(_defer_patch_dock.unbind(1))
-	# file_tree.get_parent().gui_input.connect(patch_dock.unbind(1))
-	# file_tree.mouse_entered.connect(_on_mouse_entered)
-	# file_tree.mouse_exited.connect(_on_mouse_exited)
+	_connect_file_filter()
 
-# func _on_mouse_entered() -> void:
-# 	print("mouse enter")
-# 	mouse_inside = true
+# TODO this is a hack to keep updating during file search etc and there is probably a better way
+func _connect_file_filter() -> void:
+	# First line edit isn't the filter, it's just the path edit
+	var found_first_line_edit := false
+	for c0 in file_system_dock.get_children():
+		for c1 in c0.get_children():
+			for c2 in c1.get_children():
+				if c2 is LineEdit and !found_first_line_edit:
+					found_first_line_edit = true
+					continue
+				if c2 is LineEdit:
+					c2.mouse_entered.connect(_on_mouse_entered)
+					c2.mouse_exited.connect(_on_mouse_exited)
+					return
 
-# func _on_mouse_exited() -> void:
-# 	print("mouse exit")
-# 	mouse_inside = false
+func _on_mouse_entered() -> void:
+	mouse_inside = true
+	_on_file_dock_gui_input()
 
-# func _process(delta: float) -> void:
-# 	if mouse_inside:
-# 		patch_dock()
+func _on_mouse_exited() -> void:
+	mouse_inside = false
+
+func _on_file_dock_gui_input() -> void:
+	patch_dock()
+	if mouse_inside:
+		await get_tree().process_frame
+		_on_file_dock_gui_input.call_deferred()
 
 # Patch file dock with git plugin information
 @warning_ignore("return_value_discarded")
 func patch_dock() -> void:
+	_print_debug("Patching file dock")
 	if !active:
+		_print_debug("Aborted patching file dock - not active")
 		return
 
 	var root := file_tree.get_root()
 	var addons_item : TreeItem = _parse_file_tree_depth_first(root, "addons")
 	if !addons_item:
+		_print_debug("res://addons not found!")
 		return
 	var addon_item := addons_item.get_first_child()
 	var addon_paths : Array[String] = GitSubmodulePlugin.get_all_managed_plugin_folder_names()
@@ -70,12 +93,16 @@ func patch_dock() -> void:
 
 # Patch file dock's tree item with git plugin information
 func _patch_addon_folder_item(folder_item: TreeItem, addon_paths: Array[String]) -> bool:
+	_print_debug("Patching " + folder_item.get_text(0))
+	_print_debug("Addon paths" + str(addon_paths))
 	var folder_name := folder_item.get_text(0)
 	var matching_addon_paths : Array[String]
 	matching_addon_paths.assign(
 		addon_paths.filter(func(x: String) -> bool: return x.begins_with(folder_name)))
 	# no match
+	_print_debug("Matching addon paths" + str(matching_addon_paths))
 	if matching_addon_paths.is_empty():
+		_print_debug("No matching addon paths found for " + folder_name)
 		return false
 	# one match, patch item
 	if matching_addon_paths.size() == 1 and folder_name == matching_addon_paths[0]:
@@ -101,12 +128,16 @@ func _patch_addon_folder_item(folder_item: TreeItem, addon_paths: Array[String])
 
 # Modify a folder item with our patch
 func _patch_folder_modify_item(folder_item: TreeItem) -> void:
-	folder_item.set_icon(0, plugin_icon)
-	folder_item.set_custom_color(0, FADE_COLOR)
+	_print_debug("Modifying folder item: " + folder_item.get_text(0))
+	var icon := plugin_icon
+	if folder_item.get_icon(0) != icon:
+		folder_item.set_icon(0, icon)
+	if folder_item.get_custom_color(0) != FADE_COLOR:
+		folder_item.set_custom_color(0, FADE_COLOR)
 	if folder_item.get_button_count(0) < 1:
-		# TODO listen to buttons
 		folder_item.add_button(0, git_icon, -1, false, "Managed by GitSubmodulePlugin")
-	folder_item.set_button_color(0, 0, FADE_COLOR)
+	if folder_item.get_button_color(0, 0) != FADE_COLOR:
+		folder_item.set_button_color(0, 0, FADE_COLOR)
 
 # Finds the actual tree element in the FileManager dock
 func _find_file_tree() -> Tree:
@@ -143,3 +174,7 @@ func _resize_icon(image: Image) -> Texture2D:
 func _exit_tree() -> void:
 	active = false
 	EditorInterface.get_resource_filesystem().scan()
+
+func _print_debug(msg: Variant) -> void:
+	if PRINT_DEBUG_MESSAGES:
+		print_debug(PRINT_PREFIX, msg)

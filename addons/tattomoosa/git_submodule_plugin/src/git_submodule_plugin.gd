@@ -1,26 +1,34 @@
 @tool
 extends RefCounted
 
-enum Status {
-	NOT_TRACKED,
-	TRACKED,
-	LINKED,
-}
+const SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH := "git_submodule_plugin/paths/submodules_root"
+const SUBMODULES_DEFAULT_ROOT := "res://submodules"
+# TODO not implemented
+static var submodules_root := SUBMODULES_DEFAULT_ROOT:
+	get:
+		# not connecting to signal cuz it fires on every character edit and not just when submitted
+		# if !ProjectSettings.settings_changed.is_connected(_on_settings_changed):
+		# 	@warning_ignore("return_value_discarded")
+		# 	ProjectSettings.settings_changed.connect(_on_settings_changed)
+		if !ProjectSettings.has_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH):
+			ProjectSettings.set_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH, SUBMODULES_DEFAULT_ROOT)
+		var path : String = ProjectSettings.get_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH)
+		if path != _last_known_submodules_root:
+			print_debug("Submodule root changed - last known: %s, current: %s" % [_last_known_submodules_root, path])
+			var err := _move_submodules_dir(_last_known_submodules_root, path)
+			assert(err == OK)
+		# TODO temporary until submodule root can move
+		return SUBMODULES_DEFAULT_ROOT
 
-const SUBMODULES_ROOT := "submodules/"
+static var _last_known_submodules_root : String = ProjectSettings.get_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH)
 
 @export var repo : String:
 	set(value):
 		if repo == value:
 			return
 		repo = value
-		_determine_status()
 
 @export var description : String
-
-var status : Status:
-	set(value):
-		status = value
 
 var plugin_cfg_contents := """\
 [plugin]
@@ -58,20 +66,6 @@ var author : String:
 var repo_name : String:
 	get: return repo.split("/")[1].to_lower()
 
-func _ready() -> void:
-	_determine_status()
-	# repo_loaded.emit(repo)
-
-func _get_or_create_submodules_dir() -> DirAccess:
-	var submodules_path := "res://".path_join(SUBMODULES_ROOT)
-	var dir := DirAccess.open(submodules_path)
-	if !dir:
-		var err := DirAccess.make_dir_absolute(submodules_path)
-		assert(err == OK)
-		var file := FileAccess.open(submodules_path.path_join(".gdignore"), FileAccess.WRITE)
-		file.store_buffer([])
-		dir = DirAccess.open(submodules_path)
-	return dir
 
 func init(output : Array[String] = []) -> int:
 	var err : int
@@ -123,7 +117,6 @@ func init(output : Array[String] = []) -> int:
 	assert(err == OK or err == ERR_ALREADY_EXISTS)
 	err = symlink_all_plugins()
 	assert(err == OK)
-	# status = Status.LINKED
 	return err
 
 func symlink_all_plugins() -> Error:
@@ -133,7 +126,6 @@ func symlink_all_plugins() -> Error:
 		var err := symlink_plugin(root)
 		if err != OK and err != ERR_ALREADY_EXISTS:
 			push_error(error_string(err))
-	status = Status.LINKED
 	return OK
 
 func symlink_plugin(plugin_root: String) -> Error:
@@ -181,17 +173,16 @@ func get_all_plugin_configs() -> Array[ConfigFile]:
 		arr.push_back(get_config(i))
 	return arr
 
-# this should work with res://, res://<submodule dir>, .../addons/
+# this should work with res://addons, res://<submodule dir>, .../addons/, etc
 static func set_plugin_enabled(plugin_root: String, value: bool) -> void:
 	var plugin_name := get_plugin_root_relative_to_addons(plugin_root)
 	if EditorInterface.is_plugin_enabled(plugin_name) != value:
 		EditorInterface.set_plugin_enabled(plugin_name, value)
 
-# this should work with res://, res://<submodule dir>, .../addons/
+# this should work with res://addons, res://<submodule dir>, .../addons/, etc
 static func is_plugin_enabled(plugin_root: String) -> bool:
 	var plugin_name := get_plugin_root_relative_to_addons(plugin_root)
 	return EditorInterface.is_plugin_enabled(plugin_name)
-
 
 func get_config(root_index := 0) -> ConfigFile:
 	var plugin_cfgs := find_submodule_plugin_roots()
@@ -223,7 +214,6 @@ func clone(output: Array[String] = []) -> Error:
 	if os_err != OK:
 		push_error(output)
 		return FAILED
-	status = Status.TRACKED
 	return err
 
 func remove() -> Error:
@@ -247,7 +237,6 @@ func remove_from_project() -> Error:
 		if err0 != OK:
 			err = err0
 			push_error(error_string(err0))
-	status = Status.TRACKED
 	return err
 
 func remove_plugin_from_project(plugin_root_dir_name: String) -> Error:
@@ -257,8 +246,6 @@ func remove_plugin_from_project(plugin_root_dir_name: String) -> Error:
 			return ERR_DOES_NOT_EXIST
 		var err := DirAccess.remove_absolute(path)
 		return err
-	if !has_any_plugins_in_project():
-		status = Status.TRACKED
 	return ERR_CANT_RESOLVE
 
 func has_plugin_in_project(plugin_root_dir_name: String) -> bool:
@@ -300,7 +287,7 @@ func remove_submodule(output: Array[String] = []) -> Error:
 		assert(err0 == OK)
 		var os_err := _execute_at(dir.get_current_dir(), "rm -rf %s" % repo_name, output)
 		if os_err == OK:
-			status = Status.NOT_TRACKED
+			# status = Status.NOT_TRACKED
 			return OK
 		return FAILED
 	push_warning(".git not found")
@@ -326,23 +313,6 @@ func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 		["-lc", 'cd \"%s\" && %s' % [path, cmd]],
 		output,
 		true)
-
-func _determine_status() -> void:
-	print("Determinnig status")
-	if !repo:
-		print("NO repo")
-		status = Status.NOT_TRACKED
-		return
-	var exists_in_git := DirAccess.dir_exists_absolute(get_submodule_path().path_join(".git"))
-	var exists_in_project := has_any_plugins_in_project()
-	if exists_in_git and exists_in_project:
-		status = Status.LINKED
-		return
-	if exists_in_git:
-		status = Status.TRACKED
-		return
-	status = Status.NOT_TRACKED
-	return
 
 func commit_hash(short := true) -> String:
 	var submodule_root := get_submodule_path()
@@ -376,7 +346,6 @@ func get_enabled_plugin_roots() -> Array[String]:
 	var roots := find_submodule_plugin_roots()
 	for i in roots.size():
 		var root := roots[i]
-		# var folder_name := root.split("/")[-1]
 		var folder_name := root.get_slice("/addons/", 1)
 		if EditorInterface.is_plugin_enabled(folder_name):
 			enabled.push_back(root)
@@ -396,15 +365,19 @@ static func _get_tracked_repos(path: String) -> Array[String]:
 	return git_dirs
 
 static func get_submodules_root_path() -> String:
-	return "res://".path_join(SUBMODULES_ROOT)
+	var root := submodules_root
+	# TODO abs paths windows?
+	if root.begins_with("res://") or root.begins_with("user://") or root.begins_with("/"):
+		return submodules_root
+	return "res://" + submodules_root
 
-static func _get_all_managed_plugins() -> Array[String]:
+static func _get_all_managed_plugin_roots() -> Array[String]:
 	var root_path := get_submodules_root_path()
 	var plugin_roots := _find_plugin_roots(root_path)
 	return plugin_roots
 
 static func get_all_managed_plugin_folder_names() -> Array[String]:
-	var managed_plugins := _get_all_managed_plugins()
+	var managed_plugins := _get_all_managed_plugin_roots()
 	var arr : Array[String]
 	arr.assign(managed_plugins.map(
 		func(x: String) -> String:
@@ -412,18 +385,57 @@ static func get_all_managed_plugin_folder_names() -> Array[String]:
 	))
 	return arr
 
-static func _find_plugin_roots(path: String) -> Array[String]:
+static func _find_plugin_roots(path: String, ignore := [submodules_root]) -> Array[String]:
 	var dir := DirAccess.open(path)
 	if !dir:
-		push_error("Plugin root not found")
+		push_error("Finding plugin roots, directory not found at path '%s' " % path)
 		return []
 	for file in dir.get_files():
 		if file.ends_with("plugin.cfg"):
 			return [path]
 	var cfg_paths : Array[String] = []
 	for d in dir.get_directories():
+		if d in ignore:
+			continue
 		cfg_paths.append_array(_find_plugin_roots(path.path_join(d)))
 	return cfg_paths
 
 static func get_plugin_root_relative_to_addons(plugin_root: String) -> String:
 	return plugin_root.get_slice("/addons/", 1)
+
+static func _get_or_create_submodules_dir() -> DirAccess:
+	var submodules_path := get_submodules_root_path()
+	var dir := DirAccess.open(submodules_path)
+	if !dir:
+		var err := DirAccess.make_dir_absolute(submodules_path)
+		assert(err == OK)
+		var file := FileAccess.open(submodules_path.path_join(".gdignore"), FileAccess.WRITE)
+		file.store_buffer([])
+		dir = DirAccess.open(submodules_path)
+	return dir
+
+static func _move_submodules_dir(from_path: String, to_path: String) -> Error:
+	var old_dir_abs := ProjectSettings.globalize_path(from_path)
+	var new_dir_abs := ProjectSettings.globalize_path(to_path)
+	# print(old_dir_abs, new_dir_abs)
+	push_warning("Moving submodules directory from %s to %s" % [old_dir_abs, new_dir_abs])
+	if DirAccess.dir_exists_absolute(new_dir_abs):
+		print("New directory already exists. Updating submodule root directory to new directory. No action taken.")
+		_last_known_submodules_root = to_path
+		return OK
+	if !DirAccess.dir_exists_absolute(from_path):
+		print("Original submodule folder does not exist.")
+		print("Creating new submodules folder at %s" % new_dir_abs)
+		_last_known_submodules_root = to_path
+		var dir := _get_or_create_submodules_dir()
+		if !dir:
+			push_error(error_string(DirAccess.get_open_error()))
+			return FAILED
+		return OK
+	var err := DirAccess.rename_absolute(old_dir_abs, new_dir_abs)
+	if err != OK:
+			push_error(error_string(DirAccess.get_open_error()))
+			return FAILED
+	return OK
+	
+	
