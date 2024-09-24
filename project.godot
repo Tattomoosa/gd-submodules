@@ -22,4 +22,4 @@ gdscript/warnings/return_value_discarded=1
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/tattomoosa/git_submodule_plugin/plugin.cfg")
+enabled=PackedStringArray("res://addons/explore-editor-theme/plugin.cfg", "res://addons/gdUnit4/plugin.cfg", "res://addons/tattomoosa.editor-control-preview/plugin.cfg", "res://addons/tattomoosa/git_submodule_plugin/plugin.cfg")

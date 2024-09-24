@@ -4,8 +4,6 @@ extends Tree
 signal working
 signal finished
 
-# TERE EDIT
-
 enum Column {
 	BLANK,
 	TRACKED,
@@ -81,7 +79,7 @@ func _ready() -> void:
 	item_edited.connect(_item_edited)
 	visibility_changed.connect(_on_visibility_changed)
 
-func _button_clicked(item: TreeItem, col: int, id: int, mouse_button_index: int):
+func _button_clicked(item: TreeItem, col: int, _id: int, mouse_button_index: int) -> void:
 	if mouse_button_index != MOUSE_BUTTON_LEFT:
 		return
 
@@ -134,7 +132,7 @@ func _item_edited() -> void:
 				EditorInterface.get_resource_filesystem().scan()
 			Column.LINKED:
 				if checked:
-					err = submodule.symlink()
+					err = submodule.symlink_all_plugins()
 				else:
 					_set_all_submodule_plugins_enabled(submodule, false)
 					err = submodule.remove_from_project()
@@ -196,7 +194,6 @@ func _get_plugin_relative_to_addons(plugin_root: String) -> String:
 	return plugin_root.get_slice("/addons/", 1)
 
 func reset() -> void:
-	print("reset")
 	for child in get_root().get_children():
 		get_root().remove_child(child)
 	submodules.clear()
@@ -212,10 +209,10 @@ func build() -> void:
 		item.collapsed = true
 		item.set_metadata(0, submodule)
 		item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"))
-		build_submodule_tree_item(item)
+		_build_submodule_tree_item(item)
 
 @warning_ignore("narrowing_conversion")
-func build_submodule_tree_item(item: TreeItem) -> void:
+func _build_submodule_tree_item(item: TreeItem) -> void:
 	var submodule : GitSubmodulePlugin = item.get_metadata(0)
 	var submodule_plugins := submodule.find_plugin_submodule_roots()
 	var c := Column.BLANK
