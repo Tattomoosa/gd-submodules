@@ -55,7 +55,6 @@ func _exit_tree() -> void:
 
 var author : String:
 	get: return repo.split("/")[0].to_lower()
-
 var repo_name : String:
 	get: return repo.split("/")[1].to_lower()
 
@@ -122,18 +121,13 @@ func init(output : Array[String] = []) -> int:
 	assert(err == OK)
 	err = DirAccess.make_dir_absolute("res://addons/%s" % author.to_lower())
 	assert(err == OK or err == ERR_ALREADY_EXISTS)
-	# make resource addon link
-	# print_debug(dir.get_current_dir())
-	# var symlink_dest := _get_plugin_res_path()
-	# print_debug(symlink_dest)
-	# err = dir.create_link(dir.get_current_dir(), symlink_dest)
 	err = symlink_all_plugins()
 	assert(err == OK)
 	# status = Status.LINKED
 	return err
 
 func symlink_all_plugins() -> Error:
-	var plugin_roots := find_plugin_submodule_roots()
+	var plugin_roots := find_submodule_plugin_roots()
 	print(plugin_roots)
 	for root in plugin_roots:
 		var err := symlink_plugin(root)
@@ -161,7 +155,7 @@ func symlink_plugin(plugin_root: String) -> Error:
 ## Find plugin roots, or any directory with a present plugin.cfg
 ## Only looks one plugin.cfg deep, ignores nested ones,
 ## they would be included by the symlink_all_plugins anyway
-func find_plugin_submodule_roots() -> Array[String]:
+func find_submodule_plugin_roots() -> Array[String]:
 	var plugin_addons_path := get_submodule_path().path_join("addons")
 	return _find_plugin_roots(plugin_addons_path)
 
@@ -169,7 +163,7 @@ func find_project_plugin_roots() -> Array[String]:
 	if !is_tracked:
 		push_error("Repo must be in tracked state (cloned locally) to find plugin roots")
 		return []
-	var submodule_plugin_roots := find_plugin_submodule_roots()
+	var submodule_plugin_roots := find_submodule_plugin_roots()
 	var project_roots : Array[String] = []
 	for root in submodule_plugin_roots:
 		project_roots.append(convert_submodule_path_to_project_path(root))
@@ -180,28 +174,27 @@ func convert_submodule_path_to_project_path(path: String) -> String:
 	var project_path := "res://addons/".path_join(relative)
 	return project_path
 
-static func _find_plugin_roots(path: String) -> Array[String]:
-	var dir := DirAccess.open(path)
-	if !dir:
-		push_error("Plugin root not found")
-		return []
-	for file in dir.get_files():
-		if file.ends_with("plugin.cfg"):
-			return [path]
-	var cfg_paths : Array[String] = []
-	for d in dir.get_directories():
-		cfg_paths.append_array(_find_plugin_roots(path.path_join(d)))
-	return cfg_paths
-
 func get_all_plugin_configs() -> Array[ConfigFile]:
-	var roots := find_plugin_submodule_roots()
+	var roots := find_submodule_plugin_roots()
 	var arr : Array[ConfigFile]
 	for i in roots.size():
 		arr.push_back(get_config(i))
 	return arr
 
+# this should work with res://, res://<submodule dir>, .../addons/
+static func set_plugin_enabled(plugin_root: String, value: bool) -> void:
+	var plugin_name := get_plugin_root_relative_to_addons(plugin_root)
+	if EditorInterface.is_plugin_enabled(plugin_name) != value:
+		EditorInterface.set_plugin_enabled(plugin_name, value)
+
+# this should work with res://, res://<submodule dir>, .../addons/
+static func is_plugin_enabled(plugin_root: String) -> bool:
+	var plugin_name := get_plugin_root_relative_to_addons(plugin_root)
+	return EditorInterface.is_plugin_enabled(plugin_name)
+
+
 func get_config(root_index := 0) -> ConfigFile:
-	var plugin_cfgs := find_plugin_submodule_roots()
+	var plugin_cfgs := find_submodule_plugin_roots()
 	var cfg0_path := plugin_cfgs[root_index].path_join("plugin.cfg")
 	var cf := ConfigFile.new()
 	var err := cf.load(cfg0_path)
@@ -247,7 +240,7 @@ func remove() -> Error:
 
 func remove_from_project() -> Error:
 	var err := OK
-	for submodule_roots in find_plugin_submodule_roots():
+	for submodule_roots in find_submodule_plugin_roots():
 		var root_dir_name := submodule_roots.split("/")[-1]
 		# var path := project_plugin_path_from_root_dir_name(root_dir_name)
 		var err0 := remove_plugin_from_project(root_dir_name)
@@ -273,14 +266,14 @@ func has_plugin_in_project(plugin_root_dir_name: String) -> bool:
 	return DirAccess.dir_exists_absolute(path)
 
 func has_all_plugins_in_project() -> bool:
-	var plugin_roots := find_plugin_submodule_roots()
+	var plugin_roots := find_submodule_plugin_roots()
 	for root in plugin_roots:
 		if !has_plugin_in_project(root.split("/")[-1]):
 			return false
 	return true
 
 func has_any_plugins_in_project() -> bool:
-	var plugin_roots := find_plugin_submodule_roots()
+	var plugin_roots := find_submodule_plugin_roots()
 	for root in plugin_roots:
 		if has_plugin_in_project(root.split("/")[-1]):
 			return true
@@ -313,32 +306,8 @@ func remove_submodule(output: Array[String] = []) -> Error:
 	push_warning(".git not found")
 	return ERR_FILE_BAD_PATH
 
-func _get_plugin_res_path() -> String:
-	var plugin_addons_path := get_submodule_path().path_join("addons")
-	var cfg_path : String = find_plugin_submodule_roots()[0]
-	var rel_path := cfg_path.replace(plugin_addons_path, "")
-	return "res://addons/%s" % rel_path
-	# return "res://addons/%s" % repo.to_lower()
-
 func get_submodule_path() -> String:
 	return get_submodules_root_path().path_join(repo.to_lower())
-
-static func get_submodules_root_path() -> String:
-	return "res://".path_join(SUBMODULES_ROOT)
-
-static func _get_all_managed_plugins() -> Array[String]:
-	var root_path := get_submodules_root_path()
-	var plugin_roots := _find_plugin_roots(root_path)
-	return plugin_roots
-
-static func get_all_managed_plugin_folder_names() -> Array[String]:
-	var managed_plugins := _get_all_managed_plugins()
-	var arr : Array[String]
-	arr.assign(managed_plugins.map(
-		func(x: String) -> String:
-			return x.get_slice("/addons/", 1)
-	))
-	return arr
 
 func _make_plugin_module_dir() -> Error:
 	var dir := _get_or_create_submodules_dir()
@@ -359,7 +328,9 @@ func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 		true)
 
 func _determine_status() -> void:
+	print("Determinnig status")
 	if !repo:
+		print("NO repo")
 		status = Status.NOT_TRACKED
 		return
 	var exists_in_git := DirAccess.dir_exists_absolute(get_submodule_path().path_join(".git"))
@@ -372,19 +343,6 @@ func _determine_status() -> void:
 		return
 	status = Status.NOT_TRACKED
 	return
-
-static func get_tracked_repos() -> Array[String]:
-	return _get_tracked_repos(get_submodules_root_path())
-
-static func _get_tracked_repos(path: String) -> Array[String]:
-	var dir := DirAccess.open(path)
-	dir.include_hidden = true
-	if ".git" in dir.get_directories():
-		return [dir.get_current_dir().replace(get_submodules_root_path(), "")]
-	var git_dirs : Array[String] = []
-	for d in dir.get_directories():
-		git_dirs.append_array(_get_tracked_repos(path.path_join(d)))
-	return git_dirs
 
 func commit_hash(short := true) -> String:
 	var submodule_root := get_submodule_path()
@@ -405,14 +363,17 @@ func branch_name() -> String:
 	return output[0]
 
 func is_tracked() -> bool:
-	return status == Status.TRACKED or status == Status.LINKED
+	return DirAccess.dir_exists_absolute(get_submodule_path().path_join(".git"))
 
 func is_linked() -> bool:
 	return has_any_plugins_in_project()
 
+func is_fully_linked() -> bool:
+	return has_all_plugins_in_project()
+
 func get_enabled_plugin_roots() -> Array[String]:
 	var enabled : Array[String] = []
-	var roots := find_plugin_submodule_roots()
+	var roots := find_submodule_plugin_roots()
 	for i in roots.size():
 		var root := roots[i]
 		# var folder_name := root.split("/")[-1]
@@ -420,3 +381,49 @@ func get_enabled_plugin_roots() -> Array[String]:
 		if EditorInterface.is_plugin_enabled(folder_name):
 			enabled.push_back(root)
 	return enabled
+
+static func get_tracked_repos() -> Array[String]:
+	return _get_tracked_repos(get_submodules_root_path())
+
+static func _get_tracked_repos(path: String) -> Array[String]:
+	var dir := DirAccess.open(path)
+	dir.include_hidden = true
+	if ".git" in dir.get_directories():
+		return [dir.get_current_dir().replace(get_submodules_root_path(), "")]
+	var git_dirs : Array[String] = []
+	for d in dir.get_directories():
+		git_dirs.append_array(_get_tracked_repos(path.path_join(d)))
+	return git_dirs
+
+static func get_submodules_root_path() -> String:
+	return "res://".path_join(SUBMODULES_ROOT)
+
+static func _get_all_managed_plugins() -> Array[String]:
+	var root_path := get_submodules_root_path()
+	var plugin_roots := _find_plugin_roots(root_path)
+	return plugin_roots
+
+static func get_all_managed_plugin_folder_names() -> Array[String]:
+	var managed_plugins := _get_all_managed_plugins()
+	var arr : Array[String]
+	arr.assign(managed_plugins.map(
+		func(x: String) -> String:
+			return x.get_slice("/addons/", 1)
+	))
+	return arr
+
+static func _find_plugin_roots(path: String) -> Array[String]:
+	var dir := DirAccess.open(path)
+	if !dir:
+		push_error("Plugin root not found")
+		return []
+	for file in dir.get_files():
+		if file.ends_with("plugin.cfg"):
+			return [path]
+	var cfg_paths : Array[String] = []
+	for d in dir.get_directories():
+		cfg_paths.append_array(_find_plugin_roots(path.path_join(d)))
+	return cfg_paths
+
+static func get_plugin_root_relative_to_addons(plugin_root: String) -> String:
+	return plugin_root.get_slice("/addons/", 1)

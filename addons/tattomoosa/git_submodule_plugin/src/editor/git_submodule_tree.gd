@@ -31,6 +31,24 @@ const GitSubmodulePlugin := preload("../git_submodule_plugin.gd")
 
 var submodules : Array[GitSubmodulePlugin]
 
+func reset() -> void:
+	for child in get_root().get_children():
+		get_root().remove_child(child)
+	submodules.clear()
+	build()
+
+func build() -> void:
+	var root := get_root()
+	for submodule_repo in GitSubmodulePlugin.get_tracked_repos():
+		var submodule := GitSubmodulePlugin.new()
+		submodules.push_back(submodule)
+		submodule.repo = submodule_repo
+		var item := root.create_child()
+		item.collapsed = true
+		item.set_metadata(0, submodule)
+		item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"))
+		_build_submodule_tree_item(item)
+
 @warning_ignore("return_value_discarded")
 func _ready() -> void:
 	create_item()
@@ -168,7 +186,7 @@ func _item_edited() -> void:
 					err = submodule.remove_plugin_from_project(plugin_root.split("/")[-1])
 				EditorInterface.get_resource_filesystem().scan()
 			Column.ACTIVE:
-				_set_submodule_plugin_enabled(plugin_root, checked)
+				GitSubmodulePlugin.set_plugin_enabled(plugin_root, checked)
 
 		if err != OK:
 			push_warning(error_string(err))
@@ -177,44 +195,17 @@ func _item_edited() -> void:
 	_set_finished()
 
 func _set_all_submodule_plugins_enabled(submodule: GitSubmodulePlugin, to_value: bool) -> void:
-	var plugin_roots := submodule.find_plugin_submodule_roots()
+	var plugin_roots := submodule.find_submodule_plugin_roots()
 	for plugin_root in plugin_roots:
-		_set_submodule_plugin_enabled(plugin_root, to_value)
-
-func _set_submodule_plugin_enabled(plugin_root: String, to_value: bool) -> void:
-	var relative_name := _get_plugin_relative_to_addons(plugin_root)
-	if _is_submodule_plugin_enabled(plugin_root) != to_value:
-		EditorInterface.set_plugin_enabled.call_deferred(relative_name, to_value)
-
-func _is_submodule_plugin_enabled(plugin_root: String) -> bool:
-	var relative_name := _get_plugin_relative_to_addons(plugin_root)
-	return EditorInterface.is_plugin_enabled(relative_name)
+		GitSubmodulePlugin.set_plugin_enabled(plugin_root, to_value)
 
 func _get_plugin_relative_to_addons(plugin_root: String) -> String:
 	return plugin_root.get_slice("/addons/", 1)
 
-func reset() -> void:
-	for child in get_root().get_children():
-		get_root().remove_child(child)
-	submodules.clear()
-	build()
-
-func build() -> void:
-	var root := get_root()
-	for submodule_repo in GitSubmodulePlugin.get_tracked_repos():
-		var submodule := GitSubmodulePlugin.new()
-		submodules.push_back(submodule)
-		submodule.repo = submodule_repo
-		var item := root.create_child()
-		item.collapsed = true
-		item.set_metadata(0, submodule)
-		item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"))
-		_build_submodule_tree_item(item)
-
 @warning_ignore("narrowing_conversion")
 func _build_submodule_tree_item(item: TreeItem) -> void:
 	var submodule : GitSubmodulePlugin = item.get_metadata(0)
-	var submodule_plugins := submodule.find_plugin_submodule_roots()
+	var submodule_plugins := submodule.find_submodule_plugin_roots()
 	var c := Column.BLANK
 
 	item.set_selectable(c, false)
@@ -242,7 +233,7 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 		var plugin_item := item.create_child()
 		var cfg_file := submodule.get_config(i)
 		var plugin_submodule_path := submodule_plugins[i]
-		var relative_path := _get_plugin_relative_to_addons(plugin_submodule_path)
+		var relative_path := submodule.get_plugin_root_relative_to_addons(plugin_submodule_path)
 		var project_absolute_path := "res://addons/".path_join(relative_path)
 		var plugin_name : String = cfg_file.get_value("plugin", "name", "")
 		var version : String = cfg_file.get_value("plugin", "version", "")
@@ -308,7 +299,7 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 func _update_submodule_checks(item: TreeItem) -> void:
 	# await get_tree().process_frame
 	var submodule : GitSubmodulePlugin = item.get_metadata(0)
-	var submodule_plugins := submodule.find_plugin_submodule_roots()
+	var submodule_plugins := submodule.find_submodule_plugin_roots()
 	var submodule_enabled_plugins := submodule.get_enabled_plugin_roots()
 	var is_active := submodule_enabled_plugins.size() > 0
 
@@ -355,7 +346,7 @@ func _update_submodule_checks(item: TreeItem) -> void:
 
 	for i in submodule_plugins.size():
 		var plugin_submodule_path := submodule_plugins[i]
-		var relative_path := _get_plugin_relative_to_addons(plugin_submodule_path)
+		var relative_path := submodule.get_plugin_root_relative_to_addons(plugin_submodule_path)
 		var plugin_item := item.get_child(i)
 		var folder_root_name := plugin_submodule_path.split("/")[-1]
 		var is_linked := submodule.has_plugin_in_project(folder_root_name)
@@ -382,5 +373,5 @@ func _is_enabled_indeterminate(submodule: GitSubmodulePlugin) -> bool:
 	var submodule_enabled_plugins := submodule.get_enabled_plugin_roots()
 	if submodule_enabled_plugins.is_empty():
 		return false
-	var submodule_plugins := submodule.find_plugin_submodule_roots()
+	var submodule_plugins := submodule.find_submodule_plugin_roots()
 	return submodule_enabled_plugins.size() < submodule_plugins.size()
