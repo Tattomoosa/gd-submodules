@@ -167,8 +167,8 @@ func _item_edited() -> void:
 				if checked:
 					_err = submodule.clone()
 				else:
-					# err = submodule.remove_submodule()
 					_currently_deleting = submodule
+					confirmation_dialog.dialog_text = CONFIRM_DELETE_TEXT % submodule.repo
 					confirmation_dialog.show()
 					item.set_checked(col, false)
 					return

@@ -73,6 +73,7 @@ func add_repo() -> void:
 			submodule.get_submodule_path().trim_suffix("/")
 	])
 	await get_tree().process_frame
+	await get_tree().process_frame
 	var out : Array[String] = []
 	var err := submodule.clone(out)
 	output.loading = false

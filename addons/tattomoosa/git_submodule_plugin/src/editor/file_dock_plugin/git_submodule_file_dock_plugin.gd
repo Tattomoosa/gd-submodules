@@ -87,6 +87,9 @@ func patch_dock() -> void:
 		return
 	var addon_item := addons_item.get_first_child()
 	var addon_paths : Array[String] = GitSubmodulePlugin.get_all_managed_plugin_folder_names()
+	if addon_paths.is_empty():
+		_print_debug("Empty addon paths")
+		return
 	while addon_item != null:
 		_patch_addon_folder_item(addon_item, addon_paths)
 		addon_item = addon_item.get_next()
@@ -94,7 +97,7 @@ func patch_dock() -> void:
 # Patch file dock's tree item with git plugin information
 func _patch_addon_folder_item(folder_item: TreeItem, addon_paths: Array[String]) -> bool:
 	_print_debug("Patching " + folder_item.get_text(0))
-	_print_debug("Addon paths" + str(addon_paths))
+	_print_debug("Addon paths " + str(addon_paths))
 	var folder_name := folder_item.get_text(0)
 	var matching_addon_paths : Array[String]
 	matching_addon_paths.assign(

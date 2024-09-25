@@ -1,4 +1,3 @@
-@warning_ignore("return_value_discarded")
 class_name TestGitSubmodulePlugin
 extends GdUnitTestSuite
 
@@ -35,32 +34,38 @@ func after() -> void:
 	pass
 	# _remove_mock_repo()
 
+@warning_ignore("return_value_discarded")
 func test_set_repo() -> void:
 	var submodule := GitSubmodulePlugin.new()
 	submodule.repo = TEST_REPO
 	assert_str(submodule.repo).is_equal(TEST_REPO)
 
+@warning_ignore("return_value_discarded")
 func test_finds_test_repo_submodule_directory() -> void:
 	var submodule := GitSubmodulePlugin.new()
 	submodule.repo = TEST_REPO
 	assert_str(submodule.get_submodule_path()).is_equal(MOCK_REPO_SUBMODULE_PATH)
 
+@warning_ignore("return_value_discarded")
 func test_sees_test_repo_as_tracked() -> void:
 	var submodule := GitSubmodulePlugin.new()
 	submodule.repo = TEST_REPO
 	await get_tree().process_frame
 	assert_bool(submodule.is_tracked()).is_true()
 
+@warning_ignore("return_value_discarded")
 func test_gets_test_repo_commit_hash() -> void:
 	var submodule := GitSubmodulePlugin.new()
 	submodule.repo = TEST_REPO
 	assert_str(submodule.commit_hash()).is_not_empty()
 
+@warning_ignore("return_value_discarded")
 func test_gets_test_repo_branch() -> void:
 	var submodule := GitSubmodulePlugin.new()
 	submodule.repo = TEST_REPO
 	assert_str(submodule.branch_name()).is_not_empty()
 
+@warning_ignore("return_value_discarded")
 func test_gets_test_repo_config_file() -> void:
 	var submodule := GitSubmodulePlugin.new()
 	submodule.repo = TEST_REPO

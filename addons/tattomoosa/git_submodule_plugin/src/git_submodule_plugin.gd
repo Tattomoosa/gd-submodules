@@ -2,10 +2,11 @@
 extends RefCounted
 
 const Self := preload("./git_submodule_plugin.gd")
+const GitSubmoduleAccess := preload("./access/git_submodule_access.gd")
 
 const SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH := "git_submodule_plugin/paths/submodules_root"
-const SUBMODULES_DEFAULT_ROOT := "res://submodules"
-# TODO not implemented
+const SUBMODULES_DEFAULT_ROOT := "res://.submodules"
+
 static var submodules_root := SUBMODULES_DEFAULT_ROOT:
 	get:
 		if _is_moving_submodule_dir:
@@ -123,7 +124,10 @@ func init(output : Array[String] = []) -> int:
 
 func symlink_all_plugins() -> Error:
 	var plugin_roots := find_submodule_plugin_roots()
-	print("Symlinking all plugins: ", plugin_roots)
+	if plugin_roots.is_empty():
+		push_error("Symlink all failed - No valid plugins found in submodule")
+		return ERR_DOES_NOT_EXIST
+	print("Symlinking all plugins:\n", "\n".join(plugin_roots), "\n")
 	for root in plugin_roots:
 		var err := symlink_plugin(root)
 		if err != OK and err != ERR_ALREADY_EXISTS:
@@ -191,7 +195,10 @@ func symlink_plugin(plugin_root: String, force := false) -> Error:
 ## Only looks one plugin.cfg deep, ignores nested ones,
 ## they would be included by the symlink_all_plugins anyway
 func find_submodule_plugin_roots() -> Array[String]:
-	var plugin_addons_path := get_submodule_path().path_join("addons")
+	# TODO this needlessly runs a lot...
+	# push_warning("find submodule plugin roots")
+	var submodule_path := get_submodule_path()
+	var plugin_addons_path := submodule_path.path_join("addons")
 	return _find_plugin_roots(plugin_addons_path)
 
 func find_project_plugin_roots() -> Array[String]:
@@ -364,7 +371,7 @@ func _make_plugin_module_dir() -> Error:
 func upstream_url() -> String:
 	return "git@github.com:%s.git" % repo
 
-func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
+static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
 	# print_debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
 	return OS.execute(
@@ -437,8 +444,12 @@ static func get_submodules_root_path() -> String:
 	return root
 
 static func _get_all_managed_plugin_roots() -> Array[String]:
-	var root_path := get_submodules_root_path()
-	var plugin_roots := _find_plugin_roots(root_path)
+	var repos := get_tracked_repos()
+	var plugin_roots : Array[String] = []
+	for r in repos:
+		var sm := Self.new()
+		sm.repo = r
+		plugin_roots.append_array(sm.find_project_plugin_roots())
 	return plugin_roots
 
 static func get_all_managed_plugin_folder_names() -> Array[String]:
@@ -450,23 +461,46 @@ static func get_all_managed_plugin_folder_names() -> Array[String]:
 	))
 	return arr
 
-static func _find_plugin_roots(path: String, ignore := []) -> Array[String]:
+static func _find_plugin_roots(path: String, ignore := [], include_paths : PackedStringArray = []) -> Array[String]:
+	if !include_paths.is_empty():
+		# TODO idea is to read .gitattributes and only pull in what's allowed in the archive,
+		# but still restrict to downstream of plugin.cfg
+		# guess it could just check for /addons/whatever !export-ignore ?
+		# that seems flaky...
+		pass
+	# TODO this gets called a lot more than it needs to
+	# print("finding plugin root, ", path)
 	var dir := DirAccess.open(path)
 	if !dir:
 		push_error("Finding plugin roots, directory not found at path '%s' " % path)
 		return []
+	dir.include_hidden = true
+	# TODO hangs for some reason...
+	# it reads gitignore right now anyway
+	# and should read gitattributes, but not sure how
+	# to do that in static class...
+	# Finding plugin roots might need to be instance-only
+	# if _is_folder_ignored_in_archive(path):
+	# 	push_error("Finding plugin roots, folder ignored by archive: " % path)
+	# 	return []
+	# var file_abs := dir.get_current_dir().path_join(file)
+	# print("\n\nfile ", file_abs, " in include paths ", include_paths, " ? ", file_abs in include_paths)
 	for file in dir.get_files():
 		# TODO i think this can just be file == ".gdignore"
 		if file.ends_with(".gdignore"):
+			# print("found .gdignore, returning []")
 			return []
 		# TODO see above
 		if file.ends_with("plugin.cfg"):
+			# print("found plugin.cfg, returning [%s]" % path)
 			return [path]
 	var cfg_paths : Array[String] = []
 	for d in dir.get_directories():
 		if d in ignore:
+			# print("%s in %s, continuing..." % [d, ignore])
 			continue
-		cfg_paths.append_array(_find_plugin_roots(path.path_join(d)))
+		cfg_paths.append_array(_find_plugin_roots(path.path_join(d), ignore, include_paths))
+	# print("returning cfg paths: ", cfg_paths)
 	return cfg_paths
 
 static func get_plugin_root_relative_to_addons(plugin_root: String) -> String:
@@ -573,36 +607,3 @@ static func _is_plugin_enabled(plugin_root: String) -> bool:
 
 # TODO idea to simplify logic
 # class TrackedEditorPluginAccess:
-# 	var name : String
-# 	var submodule : SubmoduleAccess
-
-# 	func _init(
-# 		p_name: String,
-# 		p_submodule: SubmoduleAccess,
-# 	) -> void:
-# 		name = p_name
-# 		submodule = p_submodule
-
-# 	func is_enabled() -> bool:
-# 		return EditorInterface._is_plugin_enabled(name)
-	
-# 	func set_enabled(value: bool = true) -> void:
-# 		if is_enabled() != value:
-# 			EditorInterface.set_plugin_enabled(name, value)
-	
-# 	func enable() -> void:
-# 		set_enabled()
-
-# 	func disable() -> void:
-# 		set_enabled(false)
-	
-# 	func get_project_install_path() -> String:
-# 		var project_path := "res://addons".path_join(name)
-# 		return project_path
-	
-# 	func install() -> String:
-# 		return ""
-
-# class SubmoduleAccess:
-# 	var repo : String
-# 	var path : String
