@@ -41,23 +41,16 @@ func get_project_install_path() -> String:
 	return project_path
 
 func is_installed() -> bool:
-	# print("plugin is installed? ", install_path)
 	if !DirAccess.dir_exists_absolute(install_path):
-		# print("no dir")
 		return false
-	# print("dir exists...")
 	var dir := DirAccess.open("res://")
 	if !dir.is_link(install_path):
-		# push_warning("Directory at '", install_path, "' is not a symbolic link")
 		return false
 	var link_path := ProjectSettings.localize_path(
 			dir.read_link(install_path))
 	link_path = link_path.trim_suffix("/")
-	# print(link_path, source_path)
 	if link_path == source_path:
-		# print("true")
 		return true
-	# print("not equal!")
 	return false
 
 func uninstall() -> Error:
@@ -74,7 +67,6 @@ func uninstall() -> Error:
 	return err
 
 func install(force := false) -> Error:
-	# print("installing")
 	var dir := DirAccess.open(ADDONS_FOLDER_PATH)
 	var dest_parent := install_path.erase(install_path.rfind("/"), 100_000)
 	var err := dir.make_dir_recursive(dest_parent)

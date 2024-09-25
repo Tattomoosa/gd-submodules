@@ -13,7 +13,6 @@ func _ready() -> void:
 	# visibility_changed.connect(_on_visibility_changed)
 
 # func _on_visibility_changed() -> void:
-# 	print("VIS CHANGED")
 # 	if visible:
 # 		process_mode = PROCESS_MODE_ALWAYS
 # 	else:

@@ -47,11 +47,12 @@ func _on_edit_changed() -> void:
 
 	var commit_text := commit_edit.text
 
+
 	output.clear()
 	output.print(color_tag,
 			"git clone ",
 			branch_text,
-			(get_origin_string()% ("[/color]" + repo_text + color_tag)),
+			(get_origin_string() % ("[/color]" + repo_text + color_tag)),
 			"[/color] ",
 			commit_text)
 
@@ -66,17 +67,27 @@ func reset() -> void:
 func add_repo() -> void:
 	output.loading = true
 	var repo := repo_edit.text
+	var branch := branch_edit.text
+	var commit := commit_edit.text
+	var origin_string := get_origin_string()
+	var upstream_url := (origin_string % repo)\
+		if "%s" in origin_string\
+		else origin_string
 	output.append_text(
 		"Cloning from %s into %s..." % [
-			(get_origin_string() % repo),
+			upstream_url,
 			GitSubmodulePlugin.submodules_root.path_join(repo)
-			# submodule.get_submodule_path().trim_suffix("/")
-			# submodule.source_root
 	])
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var out : Array[String] = []
-	var err := GitSubmoduleAccess.clone(repo)
+	print("does upstream exist here?", upstream_url)
+	var err := GitSubmoduleAccess.clone(
+		repo,
+		upstream_url,
+		branch,
+		commit
+	)
 	if err != OK:
 		push_error("Error cloning %s " % repo, " ",error_string(err))
 	output.loading = false
@@ -104,6 +115,7 @@ func update_origin(origin: int) -> void:
 	print("update origin: ", origin)
 	if origin == Origin.CUSTOM:
 		custom_origin_edit.editable = true
+		custom_origin_edit.text = ""
 		return
 	custom_origin_edit.editable = false
 	match origin:

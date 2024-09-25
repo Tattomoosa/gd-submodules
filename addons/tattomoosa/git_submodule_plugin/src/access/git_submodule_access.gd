@@ -17,18 +17,13 @@ var author : String:
 var repo_name : String:
 	get: return repo.get_slice("/", 1)
 
-func _init(
-	p_repo: String,
-	# p_submodules_root: String,
-) -> void:
+func _init(p_repo: String) -> void:
 	repo = p_repo
-	# submodules_folder = p_submodules_root
 	source_path = submodules_folder.path_join(repo)
 	push_warning("%s has changes: " % repo, has_changes())
 	var zip_file_path := submodules_folder.path_join(repo.replace("/", ".") + "." + commit_hash() +  ".zip")
 	# Tells ignorer not to make a new archive
 	var only_read := FileAccess.file_exists(zip_file_path) and !has_changes()
-	print("only read: true")
 	ignorer = GitArchiveIgnorer.new(
 		source_path,
 		zip_file_path,
@@ -173,12 +168,8 @@ func branch_name() -> String:
 func has_changes() -> bool:
 	var output: Array[String] = []
 	var os_err := _execute_at_source_path("git status --porcelain", output)
-	# print("%s has changes output: " % repo, output)
-	print(repo, ":", os_err, ":", output[0].length())
 	if os_err == OK and output.size() > 0:
-		print(output[0].length() > 0)
 		return output[0].length() > 0
-	print("fell thru, true")
 	return true
 
 func is_tracked() -> bool:
@@ -206,16 +197,26 @@ func has_all_plugins_enabled() -> bool:
 static func clone(
 	p_repo: String,
 	upstream_url: String = github_upstream_url(p_repo),
+	branch : String = "",
+	commit: String = "",
 	output: Array[String] = []
 ) -> Error:
-	print("Cloning %s" % p_repo)
+	print("Cloning %s" % p_repo, " from %s" % upstream_url)
 	var err : Error
 	var os_err : int
 	err = _make_dir(p_repo)
 	if !(err == OK or err == ERR_ALREADY_EXISTS):
 		return err
+	if !branch.is_empty():
+		branch = "-b " + branch
 	var source_folder := submodules_folder.path_join(p_repo)
-	os_err = _execute_at(source_folder, "git clone %s ." % upstream_url, output)
+	var git_cmd := "git clone %s %s ." % [
+			branch,
+			upstream_url,
+			# commit
+		]
+	print(git_cmd)
+	os_err = _execute_at(source_folder, git_cmd, output)
 	if os_err != OK:
 		push_error(output)
 		return FAILED
@@ -268,7 +269,6 @@ func init(output : Array[String] = []) -> int:
 	)
 	plugin_gd.store_string(PLUGIN_GD_CONTENTS)
 	plugins = _get_plugins()
-	print("plugins: ", plugins)
 	var installed := install_all_plugins()
 	if !installed:
 		push_error("Created repo but was unable to install created plugin.")

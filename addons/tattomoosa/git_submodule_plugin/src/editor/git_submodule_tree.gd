@@ -71,6 +71,7 @@ func build() -> void:
 		item.collapsed = true
 		item.set_metadata(0, submodule)
 		item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"))
+		# item.add_button(Column.EDIT, get_theme_icon("PluginScript", "EditorIcons"))
 		_build_submodule_tree_item(item)
 
 func _confirmation_dialog_cancel() -> void:
@@ -163,8 +164,9 @@ func _set_working() -> void:
 	working.emit()
 	# TODO why do we have to wait 2 frames just to get the status indicator up?
 	# Shouldn't it only need one?
-	for i in 2:
-		await get_tree().process_frame
+	if is_visible_in_tree():
+		for i in 2:
+			await get_tree().process_frame
 
 func _set_finished() -> void:
 	finished.emit()
@@ -258,6 +260,7 @@ func _item_edited() -> void:
 func _build_submodule_tree_item(item: TreeItem) -> void:
 	var submodule : GitSubmoduleAccess = item.get_metadata(0)
 
+	# var c := 0
 	var c := Column.BLANK
 	item.set_selectable(c, false)
 	item.set_cell_mode(c, TreeItem.CELL_MODE_CUSTOM)
@@ -365,7 +368,6 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 
 @warning_ignore("narrowing_conversion")
 func _update_submodule_checks(item: TreeItem) -> void:
-	# await get_tree().process_frame
 	var submodule : GitSubmoduleAccess = item.get_metadata(0)
 	# var submodule_plugins := submodule.find_submodule_plugin_roots()
 	var submodule_enabled_plugins := submodule.get_enabled_plugins()

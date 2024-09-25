@@ -33,10 +33,7 @@ func _on_repo_changed(text: String) -> void:
 
 func init_plugin() -> void:
 	output.loading = true
-	var submodule := GitSubmoduleAccess.new(
-		repo_edit.text,
-		GitSubmodulePlugin.submodules_root
-	)
+	var submodule := GitSubmoduleAccess.new(repo_edit.text)
 	submodule.repo = repo_edit.text
 	output.append_text(
 		"Creating repo %s at %s" % [
