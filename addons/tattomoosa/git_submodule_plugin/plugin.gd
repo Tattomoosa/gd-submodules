@@ -7,7 +7,6 @@ const GitSubmoduleFileDockPugin := preload(
     "./src/editor/file_dock_plugin/git_submodule_file_dock_plugin.gd"
 )
 
-# var submodule_settings := GitSubmoduleSettings.instantiate()
 var submodule_settings := GitSubmoduleSettingsTree.instantiate()
 var file_system_dock_plugin := GitSubmoduleFileDockPugin.new()
 

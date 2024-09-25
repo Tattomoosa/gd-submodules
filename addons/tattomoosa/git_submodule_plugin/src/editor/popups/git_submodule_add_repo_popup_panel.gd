@@ -9,6 +9,7 @@ enum Origin {
 	CUSTOM
 }
 const GitSubmodulePlugin := preload("../../git_submodule_plugin.gd")
+const GitSubmoduleAccess := GitSubmodulePlugin.GitSubmoduleAccess
 const StatusOutput := preload("../common_controls/git_submodule_output.gd")
 
 var origin_urls := {
@@ -65,12 +66,12 @@ func reset() -> void:
 func add_repo() -> void:
 	output.loading = true
 	var repo := repo_edit.text
-	var submodule := GitSubmodulePlugin.new()
-	submodule.repo = repo
+	var submodule := GitSubmoduleAccess.new(repo, GitSubmodulePlugin.submodules_root)
 	output.append_text(
 		"Cloning from %s into %s..." % [
 			(get_origin_string() % repo),
-			submodule.get_submodule_path().trim_suffix("/")
+			# submodule.get_submodule_path().trim_suffix("/")
+			submodule.source_path
 	])
 	await get_tree().process_frame
 	await get_tree().process_frame

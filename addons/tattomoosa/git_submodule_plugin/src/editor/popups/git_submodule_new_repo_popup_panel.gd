@@ -4,6 +4,7 @@ extends PopupPanel
 signal finished
 
 const GitSubmodulePlugin := preload("../../git_submodule_plugin.gd")
+const GitSubmoduleAccess := GitSubmodulePlugin.GitSubmoduleAccess
 const StatusOutput := preload("../common_controls/git_submodule_output.gd")
 
 @onready var repo_edit : LineEdit = %RepoEdit
@@ -32,12 +33,15 @@ func _on_repo_changed(text: String) -> void:
 
 func init_plugin() -> void:
 	output.loading = true
-	var submodule := GitSubmodulePlugin.new()
+	var submodule := GitSubmoduleAccess.new(
+		repo_edit.text,
+		GitSubmodulePlugin.submodules_root
+	)
 	submodule.repo = repo_edit.text
 	output.append_text(
 		"Creating repo %s at %s" % [
 			submodule.repo,
-			submodule.get_submodule_path().trim_suffix("/")
+			GitSubmodulePlugin.submodules_root
 		]
 	)
 	var out : Array[String] = []

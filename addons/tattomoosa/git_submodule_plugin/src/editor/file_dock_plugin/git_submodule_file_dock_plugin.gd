@@ -86,7 +86,19 @@ func patch_dock() -> void:
 		_print_debug("res://addons not found!")
 		return
 	var addon_item := addons_item.get_first_child()
-	var addon_paths : Array[String] = GitSubmodulePlugin.get_all_managed_plugin_folder_names()
+	# var addon_paths : Array[String] = GitSubmodulePlugin.get_all_managed_plugin_folder_names()
+	# var addon_paths : Array[String] = GitSubmodulePlugin\
+			# .get_all_managed_plugin_folder_names()\
+	var plugins := GitSubmodulePlugin.get_tracked_plugins()
+
+	# get unique plugin names, don't want duplicates
+	# just using a dict to filter out dupes
+	var unique_addon_names := {}
+	for plugin in plugins:
+		unique_addon_names[plugin.name] = true
+	var addon_paths : Array[String]
+	addon_paths.assign(unique_addon_names.keys())
+
 	if addon_paths.is_empty():
 		_print_debug("Empty addon paths")
 		return
@@ -180,4 +192,4 @@ func _exit_tree() -> void:
 
 func _print_debug(msg: Variant) -> void:
 	if PRINT_DEBUG_MESSAGES:
-		print_debug(PRINT_PREFIX, msg)
+		print_debug(PRINT_PREFIX, " ", msg)
