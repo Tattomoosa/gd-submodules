@@ -1,0 +1,52 @@
+[gd_scene load_steps=2 format=3 uid="uid://c0aopmsj2rxsg"]
+
+[ext_resource type="Script" path="res://addons/tattomoosa/git_submodule_plugin/src/git/git_ignorer_playground.gd" id="1_m17hj"]
+
+[node name="GitIgnorerPlayground" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_m17hj")
+
+[node name="HSplitContainer" type="HSplitContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+split_offset = -200
+
+[node name="PathsEdit" type="CodeEdit" parent="HSplitContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "/addons/thing
+/test/other_thing"
+placeholder_text = "Paths"
+
+[node name="HSplitContainer" type="HSplitContainer" parent="HSplitContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="GitAttributesEdit" type="CodeEdit" parent="HSplitContainer/HSplitContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "# Normalize EOL for all files that Git considers text files.
+* text=auto eol=lf
+# Addon store download only includes addons folder
+
+/addons    !export-ignore
+/addons/** !export-ignore"
+
+[node name="IgnoreOutput" type="RichTextLabel" parent="HSplitContainer/HSplitContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
