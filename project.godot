@@ -22,8 +22,8 @@ gdscript/warnings/return_value_discarded=1
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/tattomoosa.editor-control-preview/plugin.cfg", "res://addons/tattomoosa/git_submodule_plugin/plugin.cfg")
+enabled=PackedStringArray("res://addons/tattomoosa/git_submodule_plugin/plugin.cfg")
 
 [git_submodule_plugin]
 
-paths/submodules_root="res://submodules"
+paths/submodules_root="res://.submodules"

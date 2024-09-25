@@ -26,9 +26,7 @@ var origin_urls := {
 @warning_ignore("return_value_discarded")
 func _ready() -> void:
 	output.loading = false
-	# about_to_popup.connect(reset)
 	visibility_changed.connect(reset)
-	output.add_theme_font_override("normal_font", get_theme_font("output_source_mono", "EditorFonts"))
 	repo_edit.text_changed.connect(_on_edit_changed.unbind(1))
 	branch_edit.text_changed.connect(_on_edit_changed.unbind(1))
 	commit_edit.text_changed.connect(_on_edit_changed.unbind(1))
@@ -57,12 +55,12 @@ func _on_edit_changed() -> void:
 			commit_text)
 
 func reset() -> void:
-	push_warning("RESET")
 	repo_edit.clear()
 	branch_edit.clear()
 	commit_edit.clear()
 	custom_origin_edit.clear()
 	output.clear()
+	_on_edit_changed()
 
 func add_repo() -> void:
 	output.loading = true
@@ -78,7 +76,6 @@ func add_repo() -> void:
 	var out : Array[String] = []
 	var err := submodule.clone(out)
 	output.loading = false
-	# print(out)
 	if err != OK:
 		output.print(
 			"[color=red]",
@@ -88,7 +85,7 @@ func add_repo() -> void:
 			"[/color]",
 		)
 		return
-	output.append_text("OK")
+	output.print("OK")
 	await get_tree().process_frame
 	added.emit()
 	hide()

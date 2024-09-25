@@ -4,6 +4,8 @@ extends Tree
 signal working
 signal finished
 
+@export var confirmation_dialog : ConfirmationDialog
+
 enum Column {
 	BLANK,
 	TRACKED,
@@ -16,6 +18,7 @@ enum Column {
 	COLUMN_SIZE
 }
 
+const CONFIRM_DELETE_TEXT := "This action will remove %s from your file system."
 const CONFIG_TEXT = """\
 		Name: %s
 		Description: %s
@@ -30,6 +33,7 @@ const GIT_ICON := preload("../../icons/Git.svg")
 const GitSubmodulePlugin := preload("../git_submodule_plugin.gd")
 
 var submodules : Array[GitSubmodulePlugin]
+var _currently_deleting : GitSubmodulePlugin = null
 
 func reset() -> void:
 	await _set_working()
@@ -51,8 +55,19 @@ func build() -> void:
 		item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"))
 		_build_submodule_tree_item(item)
 
+func _confirmation_dialog_cancel() -> void:
+	_currently_deleting = null
+	reset()
+
+func _confirmation_dialog_confirm() -> void:
+	var err := _currently_deleting.remove_submodule()
+	if err != OK:
+		push_error(error_string(err))
+	reset()
+
 @warning_ignore("return_value_discarded")
 func _ready() -> void:
+	confirmation_dialog.title = "Delete files?"
 	create_item()
 	# add_theme_constant_override("draw_relationship_lines", 0)
 	hide_root = true
@@ -98,6 +113,8 @@ func _ready() -> void:
 	button_clicked.connect(_button_clicked)
 	item_edited.connect(_item_edited)
 	visibility_changed.connect(_on_visibility_changed)
+	confirmation_dialog.confirmed.connect(_confirmation_dialog_confirm)
+	confirmation_dialog.canceled.connect(_confirmation_dialog_cancel)
 
 func _button_clicked(item: TreeItem, col: int, _id: int, mouse_button_index: int) -> void:
 	if mouse_button_index != MOUSE_BUTTON_LEFT:
@@ -146,7 +163,11 @@ func _item_edited() -> void:
 				if checked:
 					err = submodule.clone()
 				else:
-					err = submodule.remove_submodule()
+					# err = submodule.remove_submodule()
+					_currently_deleting = submodule
+					confirmation_dialog.show()
+					item.set_checked(col, false)
+					return
 				EditorInterface.get_resource_filesystem().scan()
 			Column.LINKED:
 				if checked:
@@ -195,9 +216,6 @@ func _set_all_submodule_plugins_enabled(submodule: GitSubmodulePlugin, to_value:
 	var plugin_roots := submodule.find_submodule_plugin_roots()
 	for plugin_root in plugin_roots:
 		GitSubmodulePlugin.set_plugin_enabled(plugin_root, to_value)
-
-func _get_plugin_relative_to_addons(plugin_root: String) -> String:
-	return plugin_root.get_slice("/addons/", 1)
 
 @warning_ignore("narrowing_conversion")
 func _build_submodule_tree_item(item: TreeItem) -> void:

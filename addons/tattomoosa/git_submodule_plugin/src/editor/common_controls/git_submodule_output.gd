@@ -9,6 +9,9 @@ extends RichTextLabel
 		if is_node_ready() and loading_indicator:
 			loading_indicator.visible = loading
 
+func _ready() -> void:
+	add_theme_font_override("normal_font", get_theme_font("output_source_mono", "EditorFonts"))
+
 func print(
 	var0: Variant = "",
 	var1: Variant = "",
