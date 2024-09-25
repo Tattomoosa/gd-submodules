@@ -1,12 +1,17 @@
 extends RefCounted
 
-# const GitSubmodulePlugin := preload("../git_submodule_plugin.gd")
+const GitSubmodulePlugin := preload("../git_submodule_plugin.gd")
 const TrackedEditorPluginAccess := preload("./tracked_editor_plugin_access.gd")
+const GitIgnorer := preload("../git/git_ignorer.gd")
+const GitArchiveIgnorer := GitIgnorer.GitArchiveIgnorer
 
 var repo : String
 var source_path : String
-var submodules_root : String
 var plugins : Array[TrackedEditorPluginAccess]
+var ignorer : GitArchiveIgnorer
+
+static var submodules_folder : String:
+	get: return GitSubmodulePlugin.submodules_root
 var author : String:
 	get: return repo.get_slice("/", 0)
 var repo_name : String:
@@ -14,11 +19,21 @@ var repo_name : String:
 
 func _init(
 	p_repo: String,
-	p_submodules_root: String,
+	# p_submodules_root: String,
 ) -> void:
 	repo = p_repo
-	submodules_root = p_submodules_root
-	source_path = submodules_root.path_join(repo)
+	# submodules_folder = p_submodules_root
+	source_path = submodules_folder.path_join(repo)
+	push_warning("%s has changes: " % repo, has_changes())
+	var zip_file_path := submodules_folder.path_join(repo.replace("/", ".") + "." + commit_hash() +  ".zip")
+	# Tells ignorer not to make a new archive
+	var only_read := FileAccess.file_exists(zip_file_path) and !has_changes()
+	print("only read: true")
+	ignorer = GitArchiveIgnorer.new(
+		source_path,
+		zip_file_path,
+		only_read
+	)
 	plugins = _get_plugins()
 
 func _get_plugins() -> Array[TrackedEditorPluginAccess]:
@@ -50,6 +65,14 @@ func uninstall_all_plugins() -> bool:
 			all_uninstalled = false
 	return all_uninstalled
 
+func get_upstream_url() -> String:
+	var output : Array[String] = []
+	var os_err := _execute_at_source_path("git config --get remote.origin.url", output)
+	if os_err != OK:
+		return ""
+	return output[0].trim_suffix("\n")
+
+
 func install_all_plugins() -> bool:
 	var all_installed := true
 	for plugin in plugins:
@@ -67,6 +90,11 @@ func _find_plugin_roots() -> Array[String]:
 func _find_plugin_roots_recursive(path: String) -> Array[String]:
 	var dir := DirAccess.open(path)
 	if !dir:
+		return []
+	# TODO might have to change or move into GitArchiveIgnorer if using another ignorer
+	var ignorer_trim_path_prefix := source_path + "/"
+	if ignorer.ignores_path(path.replace(ignorer_trim_path_prefix, "") + "/"):
+		print("Path %s ignored by ignorer" % path.replace(ignorer_trim_path_prefix, "") + "/")
 		return []
 	dir.include_hidden = true
 	for file in dir.get_files():
@@ -90,49 +118,68 @@ func remove() -> Error:
 	dir.include_hidden = true
 	if ".git" not in dir.get_directories():
 		return ERR_FILE_BAD_PATH
-	var err := dir.change_dir(submodules_root)
+	var err := dir.change_dir(submodules_folder)
 	assert(err == OK)
-	# print("cd ", dir.get_current_dir(), " && rm -rf %s" % repo)
 	var os_err := _execute_at(dir.get_current_dir(), "rm -rf %s" % repo)
-	err = dir.change_dir(author)
-	if !dir:
-		push_warning("Remove cleanup: Could not cd to %s" % submodules_root.path_join(author))
-	if dir.get_files().is_empty() and dir.get_directories().is_empty():
-		err = dir.change_dir("..")
-		if err != OK:
-			push_warning("Remove cleanup: Could not cd to %s" % submodules_root)
-		err = dir.remove(author)
-		if err != OK:
-			push_warning("Remove cleanup: Could not remove dir %s" % submodules_root.path_join(author))
-		
+	err = _dir_cleanup(submodules_folder.path_join(author))
 	if os_err == OK:
 		return OK
 	return FAILED
 
-func _make_dir() -> Error:
-	var dir := DirAccess.open(submodules_root)
-	if dir.dir_exists(repo):
-		return ERR_ALREADY_EXISTS
-	return dir.make_dir_recursive(repo)
+func _execute_at_source_path(cmd: String, output: Array[String] = []) -> int:
+	return _execute_at(source_path, cmd, output)
 
-func upstream_url() -> String:
-	return "git@github.com:%s.git" % repo
+# Walks up filesystem removing empty directories until it hits a non-empty directory
+func _dir_cleanup(path: String) -> Error:
+	var err : Error = OK
+	var cwd := path.split("/")[-1]
+	var dir := DirAccess.open(path)
+	if !dir:
+		push_warning("Remove cleanup: Could not cd to %s" % path)
+	if dir.get_files().is_empty() and dir.get_directories().is_empty():
+		err = dir.change_dir("..")
+		if err != OK:
+			push_warning("Remove cleanup: Could not cd to %s" % path.path_join(".."))
+		err = dir.remove(cwd)
+		if err != OK:
+			push_warning("Remove cleanup: Could not remove dir %s" % path)
+		return _dir_cleanup(dir.get_current_dir())
+	return OK
+
+static func _make_dir(p_repo: String) -> Error:
+	var dir := DirAccess.open(submodules_folder)
+	if dir.dir_exists(p_repo):
+		return ERR_ALREADY_EXISTS
+	return dir.make_dir_recursive(p_repo)
+
+static func github_upstream_url(p_repo: String) -> String:
+	return "git@github.com:%s.git" % p_repo
 
 func commit_hash(short := true) -> String:
 	var output : Array[String] = []
 	var short_arg := "--short" if short else ""
-	var os_err := _execute_at(source_path, "git rev-parse %s HEAD" % short_arg, output)
+	var os_err := _execute_at_source_path("git rev-parse %s HEAD" % short_arg, output)
 	if os_err != OK:
-		# push_error(output)
 		return ""
-	return output[0]
+	return output[0].trim_suffix("\n")
 
 func branch_name() -> String:
 	var output : Array[String] = []
-	var err := _execute_at(source_path, "git symbolic-ref --short HEAD", output)
+	var err := _execute_at_source_path("git symbolic-ref --short HEAD", output)
 	if err != OK:
 		return ""
-	return output[0]
+	return output[0].trim_suffix("\n")
+
+func has_changes() -> bool:
+	var output: Array[String] = []
+	var os_err := _execute_at_source_path("git status --porcelain", output)
+	# print("%s has changes output: " % repo, output)
+	print(repo, ":", os_err, ":", output[0].length())
+	if os_err == OK and output.size() > 0:
+		print(output[0].length() > 0)
+		return output[0].length() > 0
+	print("fell thru, true")
+	return true
 
 func is_tracked() -> bool:
 	return DirAccess.dir_exists_absolute(source_path.path_join(".git"))
@@ -156,30 +203,30 @@ func has_plugin_enabled() -> bool:
 func has_all_plugins_enabled() -> bool:
 	return get_enabled_plugins().size() == plugins.size()
 
-func clone(output: Array[String] = [])  -> Error:
-	print("Cloning %s" % repo)
+static func clone(
+	p_repo: String,
+	upstream_url: String = github_upstream_url(p_repo),
+	output: Array[String] = []
+) -> Error:
+	print("Cloning %s" % p_repo)
 	var err : Error
 	var os_err : int
-	var dir := DirAccess.open("res://")
-	err = _make_dir()
+	err = _make_dir(p_repo)
 	if !(err == OK or err == ERR_ALREADY_EXISTS):
 		return err
-	err = dir.change_dir(source_path)
-	if err != OK:
-		return err
-	os_err = _execute_at(dir.get_current_dir(), "git clone %s ." % upstream_url(), output)
+	var source_folder := submodules_folder.path_join(p_repo)
+	os_err = _execute_at(source_folder, "git clone %s ." % upstream_url, output)
 	if os_err != OK:
 		push_error(output)
 		return FAILED
-	print("Cloned %s" % repo)
-	plugins = _get_plugins()
+	print("Cloned %s" % p_repo)
 	return err
 
 # TODO test
 func init(output : Array[String] = []) -> int:
 	var err : int
-	var dir := DirAccess.open(submodules_root)
-	err = _make_dir(); assert(err == OK)
+	var dir := DirAccess.open(submodules_folder)
+	err = _make_dir(repo); assert(err == OK)
 	err = dir.change_dir(repo); assert(err == OK)
 	# git init
 	err = _execute_at(dir.get_current_dir(), "git init", output)

@@ -66,17 +66,19 @@ func reset() -> void:
 func add_repo() -> void:
 	output.loading = true
 	var repo := repo_edit.text
-	var submodule := GitSubmoduleAccess.new(repo, GitSubmodulePlugin.submodules_root)
 	output.append_text(
 		"Cloning from %s into %s..." % [
 			(get_origin_string() % repo),
+			GitSubmodulePlugin.submodules_root.path_join(repo)
 			# submodule.get_submodule_path().trim_suffix("/")
-			submodule.source_path
+			# submodule.source_root
 	])
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var out : Array[String] = []
-	var err := submodule.clone(out)
+	var err := GitSubmoduleAccess.clone(repo)
+	if err != OK:
+		push_error("Error cloning %s " % repo, " ",error_string(err))
 	output.loading = false
 	if err != OK:
 		output.print(

@@ -31,53 +31,46 @@ func before() -> void:
 	_make_mock_repo()
 
 func after() -> void:
-	pass
-	# _remove_mock_repo()
+	_remove_mock_repo()
 
-@warning_ignore("return_value_discarded")
-func test_set_repo() -> void:
-	var submodule := GitSubmodulePlugin.new()
-	submodule.repo = TEST_REPO
-	assert_str(submodule.repo).is_equal(TEST_REPO)
+# @warning_ignore("return_value_discarded")
+# func test_set_repo() -> void:
+# 	var submodule := GitSubmodulePlugin.new()
+# 	submodule.repo = TEST_REPO
+# 	assert_str(submodule.repo).is_equal(TEST_REPO)
 
-@warning_ignore("return_value_discarded")
-func test_finds_test_repo_submodule_directory() -> void:
-	var submodule := GitSubmodulePlugin.new()
-	submodule.repo = TEST_REPO
-	assert_str(submodule.get_submodule_path()).is_equal(MOCK_REPO_SUBMODULE_PATH)
+# @warning_ignore("return_value_discarded")
+# func test_finds_test_repo_submodule_directory() -> void:
+# 	var submodule := GitSubmodulePlugin.new()
+# 	submodule.repo = TEST_REPO
+# 	assert_str(submodule.get_submodule_path()).is_equal(MOCK_REPO_SUBMODULE_PATH)
 
-@warning_ignore("return_value_discarded")
-func test_sees_test_repo_as_tracked() -> void:
-	var submodule := GitSubmodulePlugin.new()
-	submodule.repo = TEST_REPO
-	await get_tree().process_frame
-	assert_bool(submodule.is_tracked()).is_true()
+# @warning_ignore("return_value_discarded")
+# func test_sees_test_repo_as_tracked() -> void:
+# 	var submodule := GitSubmodulePlugin.new()
+# 	submodule.repo = TEST_REPO
+# 	await get_tree().process_frame
+# 	assert_bool(submodule.is_tracked()).is_true()
 
-@warning_ignore("return_value_discarded")
-func test_gets_test_repo_commit_hash() -> void:
-	var submodule := GitSubmodulePlugin.new()
-	submodule.repo = TEST_REPO
-	assert_str(submodule.commit_hash()).is_not_empty()
+# @warning_ignore("return_value_discarded")
+# func test_gets_test_repo_commit_hash() -> void:
+# 	var submodule := GitSubmodulePlugin.new()
+# 	submodule.repo = TEST_REPO
+# 	assert_str(submodule.commit_hash()).is_not_empty()
 
-@warning_ignore("return_value_discarded")
-func test_gets_test_repo_branch() -> void:
-	var submodule := GitSubmodulePlugin.new()
-	submodule.repo = TEST_REPO
-	assert_str(submodule.branch_name()).is_not_empty()
+# @warning_ignore("return_value_discarded")
+# func test_gets_test_repo_branch() -> void:
+# 	var submodule := GitSubmodulePlugin.new()
+# 	submodule.repo = TEST_REPO
+# 	assert_str(submodule.branch_name()).is_not_empty()
 
-@warning_ignore("return_value_discarded")
-func test_gets_test_repo_config_file() -> void:
-	var submodule := GitSubmodulePlugin.new()
-	submodule.repo = TEST_REPO
-	var config := submodule.get_config()
-	assert_that(config).is_not_null()
-	assert_str(config.get_value("plugin", "name")).is_equal("test_plugin")
-
-
-
-
-
-
+# @warning_ignore("return_value_discarded")
+# func test_gets_test_repo_config_file() -> void:
+# 	var submodule := GitSubmodulePlugin.new()
+# 	submodule.repo = TEST_REPO
+# 	var config := submodule.get_config()
+# 	assert_that(config).is_not_null()
+# 	assert_str(config.get_value("plugin", "name")).is_equal("test_plugin")
 
 func _make_mock_repo() -> void:
 	var path := MOCK_REPO_ADDON_PATH

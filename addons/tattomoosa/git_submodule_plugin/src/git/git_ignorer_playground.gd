@@ -12,7 +12,7 @@ func _ready() -> void:
 	git_attributes_edit.text_changed.connect(_update)
 
 func _update() -> void:
-	var ignorer := GitIgnorer.new(git_attributes_edit.text)
+	var ignorer := GitIgnorer.new()
 	var output_lines : Array[String] = []
 	for line in paths_edit.text.split("\n"):
 		if ignorer.ignores_path(line):

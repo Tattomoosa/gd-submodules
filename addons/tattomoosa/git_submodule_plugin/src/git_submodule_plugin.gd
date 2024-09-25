@@ -23,6 +23,7 @@ static var submodules_root := SUBMODULES_DEFAULT_ROOT:
 		return path
 
 static var _last_known_submodules_root : String = ProjectSettings.get_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH)
+
 static var _is_moving_submodule_dir := false
 
 static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
@@ -41,12 +42,25 @@ static func get_tracked_plugins() -> Array[TrackedEditorPluginAccess]:
 		plugins.append_array(sm.plugins)
 	return plugins
 
+static var submodules : Array[GitSubmoduleAccess] = []
+
 static func get_tracked_submodules() -> Array[GitSubmoduleAccess]:
 	var repos := _get_tracked_repos(get_submodules_root_path())
-	var smodules : Array[GitSubmoduleAccess] = []
+	var sm_names := submodules.map(func(x: GitSubmoduleAccess) -> String: return x.repo)
+	# clear removed
+	for sm in submodules:
+		if sm.repo not in repos:
+			submodules.erase(sm)
+	# populate new
 	for repo in repos:
-		smodules.push_back(GitSubmoduleAccess.new(repo, submodules_root))
-	return smodules
+		if !repo in sm_names:
+			submodules.push_back(GitSubmoduleAccess.new(repo))
+	return submodules.duplicate()
+
+static func reset_internal_state() -> void:
+	submodules.clear()
+	@warning_ignore("return_value_discarded")
+	get_tracked_submodules()
 
 static func _get_tracked_repos(path: String) -> Array[String]:
 	var dir := DirAccess.open(path)
@@ -113,13 +127,9 @@ static func _move_submodules_dir(from_path: String, to_path: String) -> Error:
 	var enabled_plugins := {}
 	var installed_plugins := {}
 
-	# TODO remove symlinks - kind of a problem
 	var err := OK
 	for submodule_repo in _get_tracked_repos(from_path):
-		var sm := GitSubmoduleAccess.new(
-			submodule_repo,
-			from_path
-		)
+		var sm := GitSubmoduleAccess.new(submodule_repo)
 		sm.repo = submodule_repo
 		for plugin in sm.get_installed_plugins():
 			installed_plugins[plugin.name] = sm.repo
@@ -143,19 +153,13 @@ static func _move_submodules_dir(from_path: String, to_path: String) -> Error:
 	_last_known_submodules_root = to_path
 
 	for old_plugin: GitSubmoduleAccess.TrackedEditorPluginAccess in installed_plugins:
-		var sm := GitSubmoduleAccess.new(
-			installed_plugins[old_plugin],
-			to_path,
-		)
+		var sm := GitSubmoduleAccess.new(installed_plugins[old_plugin])
 		var plugin := sm.get_plugin(old_plugin.name)
 		err = plugin.install()
 		if err != OK:
 			push_error("Failed to re-install %s" % plugin.name)
 	for old_plugin: GitSubmoduleAccess.TrackedEditorPluginAccess in enabled_plugins:
-		var sm := GitSubmoduleAccess.new(
-			installed_plugins[old_plugin],
-			to_path,
-		)
+		var sm := GitSubmoduleAccess.new(installed_plugins[old_plugin])
 		var plugin := sm.get_plugin(old_plugin.name)
 		plugin.enable()
 

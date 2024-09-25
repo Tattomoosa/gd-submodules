@@ -1,107 +1,155 @@
 extends RefCounted
 
-# TODO this doesn't work at all...
-# based on: https://github.com/mherrmann/gitignore_parser/blob/master/gitignore_parser.py
+const GitIgnorer := preload("./git_ignorer.gd")
 
-var DEFAULT_GITATTRIBUTES := """\
-# Normalize EOL for all files that Git considers text files.
-* text=auto eol=lf
-# Addon store download only includes addons folder
-/**        export-ignore
-/addons    !export-ignore
-/addons/** !export-ignore
-"""
-var gitattributes : String
 var root_path : String = "/"
-var rules : Array[IgnoreRule]
 
-func _init(p_gitattributes := DEFAULT_GITATTRIBUTES) -> void:
-	gitattributes = p_gitattributes
-	_parse_gitattributes()
-
-func _parse_gitattributes() -> void:
-	var lines := gitattributes.split("\n")
-	var archive_lines : Array[String] = []
-	for line in lines:
-		line = line.strip_edges()
-		if line.ends_with("export-ignore"):
-			archive_lines.append(line)
-	for line in archive_lines:
-		if line.ends_with("!export-ignore"):
-			line = line.trim_suffix("!export-ignore")
-			var rule := _rule_from_pattern(line, true)
-			if rule:
-				rules.append(rule)
-		else:
-			line = line.trim_suffix("export-ignore")
-			var rule := _rule_from_pattern(line, false)
-			if rule:
-				rules.append(rule)
-
-func _handle_negation(file_path: String) -> bool:
-	var rules_reversed := rules.duplicate()
-	rules_reversed.reverse()
-	var ignore_rules : Array[IgnoreRule]
-	ignore_rules.assign(rules_reversed)
-	for rule in ignore_rules:
-		if rule.match(file_path):
-			return !rule.negated
+func ignores_path(_path: String) -> bool:
 	return false
 
-func ignores_path(path: String) -> bool:
-	return _handle_negation(path)
+static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
+	path = ProjectSettings.globalize_path(path)
+	# print_debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
+	return OS.execute(
+		"$SHELL",
+		["-lc", 'cd \"%s\" && %s' % [path, cmd]],
+		output,
+		true)
 
-func _rule_from_pattern(pattern: String, negated: bool) -> IgnoreRule:
-	# var negated : bool = false # TODO og but i think gitattributes gets negated first
-	var original_pattern := pattern
-	if pattern.strip_edges() == "" or pattern[0] == "#":
-		return
-	if pattern[0] == "!":
-		# negated = true # TODO og but i think gitattributes gets negated first
-		negated = !negated
-		pattern = pattern.substr(1)
+# lol couldn't figure out parsing gitignore so just making a zip to list files from :D
+class GitArchiveIgnorer extends GitIgnorer:
+	var include_paths : PackedStringArray
+	var error_creating_archive_allow_all : bool
+
+	# TODO implement only read
+	func _init(path: String, zip_file_path: String, only_read: bool = false) -> void:
+		print("Creating zip archive of %s at %s" % [path, zip_file_path])
+		if !only_read:
+			var output : Array[String] = []
+			var os_err := _execute_at(path, "git archive --format=zip --output \"%s\" HEAD" % ProjectSettings.globalize_path(zip_file_path), output)
+			if os_err != OK:
+				# print(output[0])
+				error_creating_archive_allow_all = true
+				return
+		var zip_reader := ZIPReader.new()
+		var err := zip_reader.open(zip_file_path)
+		if err != OK:
+			push_error(err)
+		# assert(err == OK)
+		include_paths = zip_reader.get_files()
+		root_path = path
 	
-	# TODO not sure what this does, throwing error
+	func ignores_path(path: String) -> bool:
+		# print(path, "\n", include_paths)
+		if error_creating_archive_allow_all:
+			return false
+		for include_path in include_paths:
+			if include_path.begins_with(path):
+				return false
+		return true
+		# return path not in include_paths
 
-	# Multi-asterisks not surrounded by slashes (or at the start/end) should
-	# be treated like single-asterisks.
-	# var sub_regex0 := RegEx.create_from_string(r"([^/])\*{2,}")
-	# var sub_regex1 := RegEx.create_from_string(r"\*{2,}([^/])")
-	# pattern = sub_regex0.sub(pattern, r"\1*", true)
-	# pattern = sub_regex1.sub(pattern, r"*\1", true)
+# TODO this doesn't work at all...
+# based on: https://github.com/mherrmann/gitignore_parser/blob/master/gitignore_parser.py
+class GitAttributesIgnorer extends GitIgnorer:
+	var DEFAULT_GITATTRIBUTES := """\
+	# Normalize EOL for all files that Git considers text files.
+	* text=auto eol=lf
+	# Addon store download only includes addons folder
+	/**        export-ignore
+	/addons    !export-ignore
+	/addons/** !export-ignore
+	"""
+	var gitattributes : String
+	var rules : Array[GitIgnoreRule]
 
-	if pattern.strip_edges(false, true) == "/":
-		return
+	func _init(p_gitattributes := DEFAULT_GITATTRIBUTES) -> void:
+		gitattributes = p_gitattributes
+		_parse_gitattributes()
 
-	var directory_only := pattern[-1] == "/"
-	var anchored := "/" in pattern.substr(0, pattern.length() - 2)
-	if pattern[0] == "/":
-		pattern = pattern.substr(1)
-	if pattern[0] == "*" and pattern.length() >= 2 and pattern[1] == "*":
-		pattern = pattern.substr(2)
-	if pattern[-1] == "/":
-		pattern = pattern.substr(0, pattern.length() - 2)
-	var strip_trailing_spaces := true
-	var i := pattern.length() - 1
-	while i > 1 and pattern[i] == " ":
-		if pattern[i - 1] == "\\":
-			pattern = pattern.substr(0, i - 1)
+	func _parse_gitattributes() -> void:
+		var lines := gitattributes.split("\n")
+		var archive_lines : Array[String] = []
+		for line in lines:
+			line = line.strip_edges()
+			if line.ends_with("export-ignore"):
+				archive_lines.append(line)
+		for line in archive_lines:
+			if line.ends_with("!export-ignore"):
+				line = line.trim_suffix("!export-ignore")
+				var rule := _rule_from_pattern(line, true)
+				if rule:
+					rules.append(rule)
+			else:
+				line = line.trim_suffix("export-ignore")
+				var rule := _rule_from_pattern(line, false)
+				if rule:
+					rules.append(rule)
+
+	func _handle_negation(file_path: String) -> bool:
+		var rules_reversed := rules.duplicate()
+		rules_reversed.reverse()
+		var ignore_rules : Array[GitIgnoreRule]
+		ignore_rules.assign(rules_reversed)
+		for rule in ignore_rules:
+			if rule.match(file_path):
+				return !rule.negated
+		return false
+
+	func ignores_path(path: String) -> bool:
+		return _handle_negation(path)
+
+	func _rule_from_pattern(pattern: String, negated: bool) -> GitIgnoreRule:
+		# var negated : bool = false # TODO og but i think gitattributes gets negated first
+		var original_pattern := pattern
+		if pattern.strip_edges() == "" or pattern[0] == "#":
+			return
+		if pattern[0] == "!":
+			# negated = true # TODO og but i think gitattributes gets negated first
+			negated = !negated
+			pattern = pattern.substr(1)
+		
+		# TODO not sure what this does, throwing error
+
+		# Multi-asterisks not surrounded by slashes (or at the start/end) should
+		# be treated like single-asterisks.
+		# var sub_regex0 := RegEx.create_from_string(r"([^/])\*{2,}")
+		# var sub_regex1 := RegEx.create_from_string(r"\*{2,}([^/])")
+		# pattern = sub_regex0.sub(pattern, r"\1*", true)
+		# pattern = sub_regex1.sub(pattern, r"*\1", true)
+
+		if pattern.strip_edges(false, true) == "/":
+			return
+
+		var directory_only := pattern[-1] == "/"
+		var anchored := "/" in pattern.substr(0, pattern.length() - 2)
+		if pattern[0] == "/":
+			pattern = pattern.substr(1)
+		if pattern[0] == "*" and pattern.length() >= 2 and pattern[1] == "*":
+			pattern = pattern.substr(2)
+		if pattern[-1] == "/":
+			pattern = pattern.substr(0, pattern.length() - 2)
+		var strip_trailing_spaces := true
+		var i := pattern.length() - 1
+		while i > 1 and pattern[i] == " ":
+			if pattern[i - 1] == "\\":
+				pattern = pattern.substr(0, i - 1)
+				i = i - 1
+				strip_trailing_spaces = false
+			else:
+				if strip_trailing_spaces:
+					pattern = pattern.substr(0, i)
 			i = i - 1
-			strip_trailing_spaces = false
-		else:
-			if strip_trailing_spaces:
-				pattern = pattern.substr(0, i)
-		i = i - 1
-	return IgnoreRule.new(
-		original_pattern,
-		pattern,
-		root_path,
-		negated,
-		directory_only,
-		anchored
-	)
+		return GitIgnoreRule.new(
+			original_pattern,
+			pattern,
+			root_path,
+			negated,
+			directory_only,
+			anchored
+		)
 
-class IgnoreRule:
+class GitIgnoreRule:
 	var original_pattern : String
 	var pattern : String
 	var parsed_pattern : String

@@ -23,7 +23,7 @@ enum Column {
 	COLUMN_SIZE
 }
 
-const PRINT_DEBUG_MESSAGES := false
+const PRINT_DEBUG_MESSAGES := false 
 const PRINT_PREFIX := "[GitSubmodulePluginsSettingsTree]"
 const CONFIRM_DELETE_TEXT := "This action will remove %s from your file system."
 const CONFIG_TEXT = """\
@@ -57,9 +57,15 @@ func reset() -> void:
 	_set_finished()
 	_print_debug("Tree reloaded")
 
+# hard reset, tells plugin to reload all data
+func reset_git_submodule_plugin() -> void:
+	GitSubmodulePlugin.reset_internal_state()
+	reset()
+
 func build() -> void:
 	var root := get_root()
-	for submodule in GitSubmodulePlugin.get_tracked_submodules():
+	var tracked_submodules := GitSubmodulePlugin.get_tracked_submodules()
+	for submodule in tracked_submodules:
 		submodules.push_back(submodule)
 		var item := root.create_child()
 		item.collapsed = true
@@ -142,7 +148,6 @@ func _button_clicked(item: TreeItem, col: int, _id: int, mouse_button_index: int
 		item.set_editable(Column.COMMIT, true)
 		return
 
-# TODO unused, idea was to refresh on re-open settings page
 func _on_visibility_changed() -> void:
 	if !is_visible_in_tree():
 		_print_debug("Visibility changed to false, doing nothing.")
@@ -179,11 +184,12 @@ func _item_edited() -> void:
 		match col:
 			Column.TRACKED:
 				if checked:
-					_print_debug("Cloning %s...")
-					_err = submodule.clone()
-					if _err != OK: _print_debug("FAILED")
-					else: _print_debug("OK")
-					EditorInterface.get_resource_filesystem().scan()
+					pass
+					# _print_debug("Cloning %s...")
+					# _err = submodule.clone()
+					# if _err != OK: _print_debug("FAILED")
+					# else: _print_debug("OK")
+					# EditorInterface.get_resource_filesystem().scan()
 				else:
 					_currently_deleting = submodule
 					confirmation_dialog.dialog_text = CONFIRM_DELETE_TEXT % submodule.repo
@@ -271,7 +277,7 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 
 	c = Column.REPO
 	item.set_text(c, submodule.repo)
-	item.set_tooltip_text(c, submodule.upstream_url())
+	# item.set_tooltip_text(c, )
 
 	c = Column.BRANCH
 	item.set_text(c, submodule.branch_name())
@@ -345,7 +351,15 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 		config_item.set_text(c, config_text)
 		config_item.set_autowrap_mode(c, TextServer.AUTOWRAP_WORD_SMART)
 		config_item.set_selectable(c, true)
-	item.set_tooltip_text(c, "Contains Plugins:\n" + "\n".join(config_texts))
+	var upstream_url := submodule.get_upstream_url() 
+	if upstream_url == "":
+		upstream_url = "No upstream!"
+	item.set_tooltip_text(
+		c,
+		"Upstream: " + upstream_url + "\n"\
+				+ "Contains Plugins:\n"\
+				+ "\n".join(config_texts)
+		)
 
 	_update_submodule_checks(item)
 
