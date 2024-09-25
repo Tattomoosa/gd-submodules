@@ -1,6 +1,6 @@
-extends GdUnitTestSuite
 @warning_ignore("return_value_discarded")
-
+class_name TestGitSubmodulePlugin
+extends GdUnitTestSuite
 
 const GitSubmodulePlugin := preload("res://addons/tattomoosa/git_submodule_plugin/src/git_submodule_plugin.gd")
 

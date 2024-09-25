@@ -28,6 +28,10 @@ const CONFIG_TEXT = """\
 		Installs to: %s\
 		"""
 
+const ACTIVE_ICON_COLOR := Color(Color.WHITE)
+const CHECKED_ICON_COLOR := Color(Color.WHITE, 0.5)
+const NOT_CHECKED_ICON_COLOR := Color(Color.WHITE, 0.2)
+
 const GIT_ICON := preload("../../icons/Git.svg")
 
 const GitSubmodulePlugin := preload("../git_submodule_plugin.gd")
@@ -155,13 +159,13 @@ func _item_edited() -> void:
 
 	await _set_working()
 	if data is GitSubmodulePlugin:
-		var err := OK
+		var _err := OK
 		var submodule : GitSubmodulePlugin = data
 
 		match col:
 			Column.TRACKED:
 				if checked:
-					err = submodule.clone()
+					_err = submodule.clone()
 				else:
 					# err = submodule.remove_submodule()
 					_currently_deleting = submodule
@@ -170,21 +174,27 @@ func _item_edited() -> void:
 					return
 				EditorInterface.get_resource_filesystem().scan()
 			Column.LINKED:
+				var indeterminate := _is_in_project_indeterminate(submodule)
+				if indeterminate:
+					checked = false
+				item.set_checked(col, checked)
 				if checked:
-					err = submodule.symlink_all_plugins()
+					_err = submodule.symlink_all_plugins()
 				else:
 					_set_all_submodule_plugins_enabled(submodule, false)
-					err = submodule.remove_from_project()
+					_err = submodule.remove_from_project()
 				EditorInterface.get_resource_filesystem().scan()
 			Column.ACTIVE:
 				var indeterminate := _is_enabled_indeterminate(submodule)
 				if indeterminate:
 					checked = false
+				item.set_checked(col, checked)
 				if submodule.is_linked():
 					_set_all_submodule_plugins_enabled(submodule, checked)
-		if err != OK:
-			push_warning(error_string(err))
+		# if err != OK:
+		# 	print(error_string(err))
 		_update_submodule_checks.call_deferred(item)
+		# reset()
 
 	# TODO better naming, typing
 	# GitSubmodulePlugin should be just GitSubmodule?
@@ -193,22 +203,22 @@ func _item_edited() -> void:
 	if data is String:
 		var plugin_root : String = data
 		var submodule : GitSubmodulePlugin = item.get_parent().get_metadata(0)
-		var err : Error
+		var _err : Error
 
 		_set_working()
 		match col:
 			Column.LINKED:
 				if checked:
-					err = submodule.symlink_plugin(plugin_root)
+					_err = submodule.symlink_plugin(plugin_root)
 				else:
-					err = submodule.remove_plugin_from_project(plugin_root.split("/")[-1])
+					_err = submodule.remove_plugin_from_project(plugin_root.split("/")[-1])
 				EditorInterface.get_resource_filesystem().scan()
 			Column.ACTIVE:
 				GitSubmodulePlugin.set_plugin_enabled(plugin_root, checked)
-
-		if err != OK:
-			push_warning(error_string(err))
+		# if err != OK:
+		# 	print(error_string(err))
 		_update_submodule_checks.call_deferred(item.get_parent())
+		# reset()
 
 	_set_finished()
 
@@ -221,8 +231,8 @@ func _set_all_submodule_plugins_enabled(submodule: GitSubmodulePlugin, to_value:
 func _build_submodule_tree_item(item: TreeItem) -> void:
 	var submodule : GitSubmodulePlugin = item.get_metadata(0)
 	var submodule_plugins := submodule.find_submodule_plugin_roots()
-	var c := Column.BLANK
 
+	var c := Column.BLANK
 	item.set_selectable(c, false)
 	item.set_cell_mode(c, TreeItem.CELL_MODE_CUSTOM)
 
@@ -233,13 +243,21 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 
 	item.set_icon(Column.TRACKED, GIT_ICON)
 	item.set_icon_max_width(Column.TRACKED, icon_scale)
+
 	item.set_icon(Column.LINKED, get_theme_icon("Load", "EditorIcons"))
 	item.set_icon_max_width(Column.LINKED, icon_scale)
 
+	item.set_tooltip_text(Column.ACTIVE, "Enabled in Project")
 
 	item.set_text(Column.REPO, submodule.repo)
+	item.set_tooltip_text(Column.REPO, submodule.upstream_url())
 	item.set_text(Column.BRANCH, submodule.branch_name())
+	item.set_tooltip_text(Column.BRANCH, "Git branch")
 	item.set_text(Column.COMMIT, submodule.commit_hash())
+	item.set_tooltip_text(Column.BRANCH, "Git commit")
+
+	for c_i: int in [Column.REPO, Column.BRANCH, Column.COMMIT]:
+		item.set_selectable(c_i, true)
 
 	item.set_text_alignment(Column.EDIT, HORIZONTAL_ALIGNMENT_CENTER)
 
@@ -284,16 +302,18 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 		# for p_i: int in [Column.BLANK, Column.REPO, Column.TRACKED, Column.LINKED, Column.ACTIVE]:
 		# 	plugin_item.set_custom_bg_color(p_i, plugin_item_color)
 
+		var cfg_name : String = cfg_file.get_value("plugin", "name", "")
+		var cfg_version : String = cfg_file.get_value("plugin", "version", "")
 		var config_text := CONFIG_TEXT % [
-			cfg_file.get_value("plugin", "name", ""),
+			cfg_name,
 			cfg_file.get_value("plugin", "description", ""),
 			cfg_file.get_value("plugin", "author", ""),
-			cfg_file.get_value("plugin", "version", ""),
+			cfg_version,
 			cfg_file.get_value("plugin", "script", ""),
 			project_absolute_path
 		]
 		@warning_ignore("return_value_discarded")
-		config_texts.append(config_text)
+		config_texts.append("%s v%s" % [cfg_name, cfg_version])
 		plugin_item.set_tooltip_text(Column.REPO, config_text)
 
 		var config_item := plugin_item.create_child()
@@ -306,7 +326,7 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 		# var config_item_color := get_theme_color("dark_color_3", "Editor")
 		# for c_i: int in [Column.BLANK, Column.REPO, Column.TRACKED, Column.LINKED, Column.ACTIVE]:
 		# 	config_item.set_custom_bg_color(c_i, config_item_color)
-	item.set_tooltip_text(c, "\n\n".join(config_texts))
+	item.set_tooltip_text(c, "Contains Plugins:\n" + "\n".join(config_texts))
 
 	_update_submodule_checks(item)
 
@@ -322,33 +342,46 @@ func _update_submodule_checks(item: TreeItem) -> void:
 	item.set_checked(c, submodule.is_tracked())
 	item.set_editable(c, !submodule.is_linked())
 	if submodule.is_tracked():
-		item.set_icon_modulate(c, Color(Color.WHITE, 0.4))
+		item.set_tooltip_text(Column.TRACKED, "Tracked in Git")
+		item.set_icon_modulate(c, CHECKED_ICON_COLOR)
 	else:
-		item.set_icon_modulate(c, Color(Color.WHITE, 0.1))
+		item.set_tooltip_text(Column.TRACKED, "Not tracked in Git")
+		item.set_icon_modulate(c, NOT_CHECKED_ICON_COLOR)
 
 	c = Column.LINKED
 	item.set_editable(c, !is_active)
 	item.set_checked(c, submodule.is_linked())
-	if submodule.is_linked():
-		if !submodule.has_all_plugins_in_project():
-			item.set_indeterminate(c, true)
-		else:
+	if submodule.has_any_plugins_in_project():
+		if submodule.has_all_plugins_in_project():
+			item.set_tooltip_text(Column.LINKED, "Installed in Project")
 			item.set_indeterminate(c, false)
-
-		item.set_icon_modulate(c, Color(Color.WHITE, 0.4))
+		else:
+			var plugins_in_project := submodule.get_plugins_in_project().size()
+			var count_text := "(%d/%d)" % [plugins_in_project, submodule_plugins.size()]
+			item.set_tooltip_text(c, "%s installed in Project" % count_text)
+			item.set_indeterminate(c, true)
+		item.set_icon_modulate(c, CHECKED_ICON_COLOR)
 	else:
+		item.set_tooltip_text(c, "Not installed in Project")
 		item.set_indeterminate(c, false)
-		item.set_icon_modulate(c, Color(Color.WHITE, 0.1))
+		item.set_icon_modulate(c, NOT_CHECKED_ICON_COLOR)
 
 	c = Column.ACTIVE
 	if is_active:
 		item.set_editable(Column.LINKED, false)
 		item.set_checked(c, true)
+		item.set_icon_modulate(c, ACTIVE_ICON_COLOR)
 		var indeterminate := _is_enabled_indeterminate(submodule)
-		item.set_indeterminate(c, indeterminate)
 		var theme_icon := "GuiRadioCheckedDisabled" if indeterminate else "StatusSuccess"
 		item.set_icon(c, get_theme_icon(theme_icon, &"EditorIcons"))
+		if indeterminate:
+			var count_text := "(%d/%d)" % [submodule_enabled_plugins.size(), submodule_plugins.size()]
+			item.set_tooltip_text(c, "%s enabled in Project" % count_text)
+		else:
+			item.set_tooltip_text(c, "Enabled in Project")
 	else:
+		item.set_icon_modulate(c, NOT_CHECKED_ICON_COLOR)
+		item.set_tooltip_text(c, "Not enabled in Project")
 		item.set_indeterminate(c, false)
 		item.set_checked(c, false)
 		item.set_editable(Column.LINKED, true)
@@ -369,20 +402,28 @@ func _update_submodule_checks(item: TreeItem) -> void:
 		c = Column.LINKED
 		plugin_item.set_checked(c, is_linked)
 		if submodule.is_linked():
-			plugin_item.set_icon_modulate(c, Color(Color.WHITE, 0.4))
+			plugin_item.set_icon_modulate(c, CHECKED_ICON_COLOR)
+			plugin_item.set_tooltip_text(c, "Installed in project")
 		else:
-			plugin_item.set_icon_modulate(c, Color(Color.WHITE, 0.1))
+			plugin_item.set_icon_modulate(c, NOT_CHECKED_ICON_COLOR)
+			plugin_item.set_tooltip_text(c, "Not installed in project")
 
 		c = Column.ACTIVE
-		plugin_item.set_checked(c, EditorInterface.is_plugin_enabled(relative_path))
+		plugin_item.set_checked(c, submodule.has_plugin_enabled(relative_path))
 		plugin_item.set_editable(c, is_linked)
 		if plugin_item.is_checked(c):
+			item.set_icon_modulate(c, ACTIVE_ICON_COLOR)
 			plugin_item.set_editable(Column.LINKED, false)
 			plugin_item.set_icon(c, get_theme_icon("StatusSuccess", "EditorIcons"))
+			plugin_item.set_tooltip_text(c, "Enabled")
 		else:
+			item.set_icon_modulate(c, NOT_CHECKED_ICON_COLOR)
+			plugin_item.set_tooltip_text(c, "Not enabled")
 			plugin_item.set_editable(Column.LINKED, true)
 			plugin_item.set_icon(c, get_theme_icon("GuiRadioUnchecked", "EditorIcons"))
-		# await get_tree().process_frame
+
+func _is_in_project_indeterminate(submodule: GitSubmodulePlugin) -> bool:
+	return !submodule.has_all_plugins_in_project() and submodule.has_any_plugins_in_project()
 
 func _is_enabled_indeterminate(submodule: GitSubmodulePlugin) -> bool:
 	var submodule_enabled_plugins := submodule.get_enabled_plugin_roots()

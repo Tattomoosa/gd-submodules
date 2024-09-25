@@ -14,7 +14,7 @@ static var submodules_root := SUBMODULES_DEFAULT_ROOT:
 			ProjectSettings.set_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH, SUBMODULES_DEFAULT_ROOT)
 		var path : String = ProjectSettings.get_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH)
 		if path != _last_known_submodules_root:
-			print_debug("Submodule root changed - last known: %s, current: %s" % [_last_known_submodules_root, path])
+			print("Submodule root changed - last known: %s, current: %s" % [_last_known_submodules_root, path])
 			var err := _move_submodules_dir(_last_known_submodules_root, path)
 			if err:
 				return _last_known_submodules_root
@@ -68,7 +68,6 @@ var author : String:
 	get: return repo.split("/")[0].to_lower()
 var repo_name : String:
 	get: return repo.split("/")[1].to_lower()
-
 
 func init(output : Array[String] = []) -> int:
 	var err : int
@@ -138,7 +137,7 @@ func _plugin_root_from_plugin_name(plugin_name: String) -> String:
 			return root
 	return ""
 
-func symlink_plugin(plugin_root: String) -> Error:
+func symlink_plugin(plugin_root: String, force := false) -> Error:
 	var dir_path := get_submodule_path().path_join("addons")
 	var repo_dir := DirAccess.open(dir_path)
 	if !repo_dir:
@@ -157,34 +156,16 @@ func symlink_plugin(plugin_root: String) -> Error:
 		push_error("Failed to create directories along path: ", mkdirs)
 		return err
 	
-	# TODO these don't seem to find (broken) symlinks?
-	# if FileAccess.file_exists(project_install_path):
-	# 	push_warning("FILE EXISTS")
-	# if DirAccess.dir_exists_absolute(project_install_path):
-	# 	push_warning("DIR EXISTS")
-	# if FileAccess.file_exists(project_install_path) or DirAccess.dir_exists_absolute(project_install_path):
-	# 	push_warning("Project install path exists: %s" % project_install_path)
-	# 	if !repo_dir.is_link:
-	# 		push_error("Non-symlink folder found at project install path %s" % project_install_path)
-	# 		return FAILED
-	# 	push_warning("Old symlink found.")
-	# 	var link_dir := repo_dir.read_link(project_install_path)
-	# 	if link_dir == plugin_root: 
-	# 		push_warning("Link points to same path. No action taken.")
-	# 		return OK
-	# 	err = DirAccess.remove_absolute(project_install_path)
-	# 	if err != OK:
-	# 		push_error("Could not remove existing symbolic link..")
-	# 		return FAILED
 	if repo_dir.is_link(project_install_path):
-		push_error("Symlink %s already exists" % project_install_path)
 		var links_to := repo_dir.read_link(project_install_path)
 		if links_to == plugin_root:
-			push_error("Symlink already links to plugin root location ")
+			push_warning("Attempted to create symlink when one already exists and links to correct plugin root location ")
 			return OK
 		else:
-			push_error("Symlink links to another location : %s" % links_to)
-			push_error("Removing symlink...")
+			push_error("Symlink already exists and links to another plugin location : %s" % links_to)
+			if !force:
+				return ERR_ALREADY_EXISTS
+			push_error("Force set to true... Removing symlink...")
 			err = DirAccess.remove_absolute(project_install_path)
 			if err != OK:
 				push_error("Could not remove existing symlink via DirAccess. Using rm...")
@@ -261,7 +242,7 @@ func clone(output: Array[String] = []) -> Error:
 	err = dir.change_dir(repo)
 	if err != OK:
 		return err
-	os_err = _execute_at(dir.get_current_dir(), "git clone %s ." % _upstream_url(), output)
+	os_err = _execute_at(dir.get_current_dir(), "git clone %s ." % upstream_url(), output)
 	if os_err != OK:
 		push_error(output)
 		return FAILED
@@ -272,10 +253,10 @@ func remove() -> Error:
 		return ERR_INVALID_DATA
 	var err := remove_from_project()
 	if err != OK:
-		push_warning(error_string(err))
+		return err
 	err = remove_submodule()
 	if err != OK:
-		push_warning(error_string(err))
+		return err
 	assert(err == OK)
 	return err
 
@@ -318,7 +299,20 @@ func get_plugins_in_project() -> Array[String]:
 
 func has_plugin_in_project(plugin_root_dir_name: String) -> bool:
 	var path := project_plugin_path_from_root_dir_name(plugin_root_dir_name)
-	return DirAccess.dir_exists_absolute(path)
+	if !DirAccess.dir_exists_absolute(path):
+		return false
+	# need to instantiate to check link matches...
+	var dir := DirAccess.open("res://")
+	# exists, is it a link?
+	if !dir.is_link(path):
+		push_warning("Directory at '", path, "' is not a symbolic link")
+		return false
+	# is the link to the right place?
+	var link_path := dir.read_link(path)
+	return link_path.begins_with(ProjectSettings.globalize_path(get_submodule_path()))
+
+func has_plugin_enabled(plugin_root_dir_name: String) -> bool:
+	return _is_plugin_enabled(plugin_root_dir_name) and has_plugin_in_project(plugin_root_dir_name)
 
 func has_all_plugins_in_project() -> bool:
 	var plugin_roots := find_submodule_plugin_roots()
@@ -344,21 +338,17 @@ func project_plugin_path_from_root_dir_name(plugin_root_dir_name: String) -> Str
 
 func remove_submodule(output: Array[String] = []) -> Error:
 	var dir := DirAccess.open(get_submodule_path())
-	# push_warning(dir)
 	if !dir:
 		return ERR_CANT_OPEN
 	dir.include_hidden = true
-	# push_warning(dir.get_directories())
 	if ".git" in dir.get_directories():
-		# push_warning(dir.get_current_dir())
 		var err0 := dir.change_dir("..")
 		assert(err0 == OK)
 		var os_err := _execute_at(dir.get_current_dir(), "rm -rf %s" % repo_name, output)
 		if os_err == OK:
-			# status = Status.NOT_TRACKED
 			return OK
 		return FAILED
-	push_warning(".git not found")
+	push_warning("Error removing submodule - folder .git not found at %s" % dir.get_current_dir())
 	return ERR_FILE_BAD_PATH
 
 func get_submodule_path() -> String:
@@ -370,7 +360,8 @@ func _make_plugin_module_dir() -> Error:
 		return ERR_ALREADY_EXISTS
 	return dir.make_dir_recursive(repo)
 
-func _upstream_url() -> String:
+# TODO support non-github
+func upstream_url() -> String:
 	return "git@github.com:%s.git" % repo
 
 func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
@@ -415,10 +406,8 @@ func get_enabled_plugin_roots() -> Array[String]:
 	for i in roots.size():
 		var root := roots[i]
 		var folder_name := root.get_slice("/addons/", 1)
-		if is_plugin_enabled(folder_name):
+		if has_plugin_enabled(folder_name):
 			enabled.push_back(root)
-	if !enabled.is_empty():
-		print("Found enabled plugins %s in %s" % [str(enabled), repo])
 	return enabled
 
 static func get_tracked_repos() -> Array[String]:
@@ -461,8 +450,6 @@ static func get_all_managed_plugin_folder_names() -> Array[String]:
 	))
 	return arr
 
-# TODO now that submodule root can be renamed, it doesn't make sense to ignore
-# TODO removed it but added ignoring directories with .gdignore
 static func _find_plugin_roots(path: String, ignore := []) -> Array[String]:
 	var dir := DirAccess.open(path)
 	if !dir:
@@ -489,7 +476,7 @@ static func _get_or_create_submodules_dir() -> DirAccess:
 	var submodules_path := get_submodules_root_path()
 	var dir := DirAccess.open(submodules_path)
 	if !dir:
-		print_debug("Creating submodules root path'%s'" % submodules_path)
+		print("Creating submodules root path'%s'" % submodules_path)
 		var err := DirAccess.make_dir_absolute(submodules_path)
 		assert(err == OK)
 		var file := FileAccess.open(submodules_path.path_join(".gdignore"), FileAccess.WRITE)
@@ -552,9 +539,6 @@ static func _move_submodules_dir(from_path: String, to_path: String) -> Error:
 		return err
 	_last_known_submodules_root = to_path
 
-	print("installed_plugins" , installed_plugins)
-	print("enabled_plugins" , enabled_plugins)
-
 	for plugin: String in installed_plugins:
 		var sm : Self = installed_plugins[plugin]
 		var plugin_root := sm._plugin_root_from_plugin_name(plugin)
@@ -564,9 +548,6 @@ static func _move_submodules_dir(from_path: String, to_path: String) -> Error:
 		else:
 			print("Re-installed ", plugin)
 	for plugin: String in enabled_plugins:
-		var sm : Self = enabled_plugins[plugin]
-		var plugin_root := sm._plugin_root_from_plugin_name(plugin)
-		push_warning("plugin ", plugin, "plugin root ", plugin_root)
 		set_plugin_enabled(plugin, true)
 		print("Re-enabled", plugin)
 
@@ -584,8 +565,9 @@ static func set_plugin_enabled(plugin_root: String, value: bool) -> void:
 	if EditorInterface.is_plugin_enabled(plugin_name) != value:
 		EditorInterface.set_plugin_enabled(plugin_name, value)
 
+# TODO multiple copies of a plugin can't be differentiated here
 # this should work with res://addons, res://<submodule dir>, .../addons/, etc
-static func is_plugin_enabled(plugin_root: String) -> bool:
+static func _is_plugin_enabled(plugin_root: String) -> bool:
 	var plugin_name := get_plugin_root_relative_to_addons(plugin_root)
 	return EditorInterface.is_plugin_enabled(plugin_name)
 
@@ -602,7 +584,7 @@ static func is_plugin_enabled(plugin_root: String) -> bool:
 # 		submodule = p_submodule
 
 # 	func is_enabled() -> bool:
-# 		return EditorInterface.is_plugin_enabled(name)
+# 		return EditorInterface._is_plugin_enabled(name)
 	
 # 	func set_enabled(value: bool = true) -> void:
 # 		if is_enabled() != value:
