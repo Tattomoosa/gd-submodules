@@ -1,7 +1,7 @@
 @tool
 extends Control
 
-const PRINT_DEBUG_MESSAGES := true
+const PRINT_DEBUG_MESSAGES := false
 const PRINT_PREFIX := "[GitSubmoduleFileDockPlugin] "
 const FADE_COLOR := Color(1, 1, 1, 0.4)
 
@@ -27,7 +27,7 @@ func _ready() -> void:
 @warning_ignore("return_value_discarded")
 func initialize() -> void:
 	_print_debug("Initializing GitSubmoduleFileDockPlugin")
-	# Non-native Godot icon needs to be resized, would probably be better to do this in the file itself..
+	# Non-native Godot icon is big and needs to be resized, would probably be better to do this in the file itself..
 	git_icon = _resize_icon(GIT_ICON.get_image())
 	# TODO placeholder, need better git status icons
 	changes_icon = REPO_CHANGES_ICON
@@ -56,6 +56,7 @@ func initialize() -> void:
 	_connect_file_filter()
 
 # TODO this is a hack to keep updating during file search etc and there is probably a better way
+@warning_ignore("return_value_discarded")
 func _connect_file_filter() -> void:
 	# First line edit isn't the filter, it's just the path edit
 	var found_first_line_edit := false
@@ -66,8 +67,9 @@ func _connect_file_filter() -> void:
 					found_first_line_edit = true
 					continue
 				if c2 is LineEdit:
-					c2.mouse_entered.connect(_on_mouse_entered)
-					c2.mouse_exited.connect(_on_mouse_exited)
+					var le := c2 as LineEdit
+					le.mouse_entered.connect(_on_mouse_entered)
+					le.mouse_exited.connect(_on_mouse_exited)
 					return
 
 func _on_mouse_entered() -> void:

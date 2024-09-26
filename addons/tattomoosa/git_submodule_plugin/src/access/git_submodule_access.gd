@@ -67,7 +67,6 @@ func get_upstream_url() -> String:
 		return ""
 	return output[0].trim_suffix("\n")
 
-
 func install_all_plugins() -> bool:
 	var all_installed := true
 	for plugin in plugins:
@@ -80,7 +79,11 @@ func install_all_plugins() -> bool:
 
 func _find_plugin_roots() -> Array[String]:
 	var addons_path := source_path.path_join("addons")
-	return _find_plugin_roots_recursive(addons_path)
+	var plugin_roots := _find_plugin_roots_recursive(addons_path)
+	return plugin_roots
+
+# func _get_submodule_cache() -> Array[String]:
+
 
 func _find_plugin_roots_recursive(path: String) -> Array[String]:
 	var dir := DirAccess.open(path)

@@ -22,8 +22,13 @@ gdscript/warnings/return_value_discarded=1
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/explore-editor-theme/plugin.cfg", "res://addons/gdUnit4/plugin.cfg", "res://addons/tattomoosa.editor-control-preview/plugin.cfg", "res://addons/tattomoosa/git_submodule_plugin/plugin.cfg", "res://addons/tattomoosa/lumberjack/plugin.cfg")
+enabled=PackedStringArray("res://addons/explore-editor-theme/plugin.cfg", "res://addons/tattomoosa/git_submodule_plugin/plugin.cfg")
 
 [git_submodule_plugin]
 
 paths/submodules_root="res://.submodules"
+
+[git_submodules]
+
+settings/submodule_folder="res://.submodules"
+settings/use_file_dock_plugin=true

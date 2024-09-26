@@ -1,20 +1,26 @@
 @tool
 extends RefCounted
 
+# Static 
+
 const Self := preload("./git_submodule_plugin.gd")
 const GitSubmoduleAccess := preload("./access/git_submodule_access.gd")
 const TrackedEditorPluginAccess := preload("./access/tracked_editor_plugin_access.gd")
 
-const SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH := "git_submodule_plugin/paths/submodules_root"
+const SUBMODULES_ROOT_SETTINGS_PATH := "git_submodule_plugin/paths/submodules_root"
 const SUBMODULES_DEFAULT_ROOT := "res://.submodules"
+
+
+static func _static_init():
+	pass
 
 static var submodules_root := SUBMODULES_DEFAULT_ROOT:
 	get:
 		if _is_moving_submodule_dir:
 			return _last_known_submodules_root
-		if !ProjectSettings.has_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH):
-			ProjectSettings.set_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH, SUBMODULES_DEFAULT_ROOT)
-		var path : String = ProjectSettings.get_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH)
+		if !ProjectSettings.has_setting(SUBMODULES_ROOT_SETTINGS_PATH):
+			ProjectSettings.set_setting(SUBMODULES_ROOT_SETTINGS_PATH, SUBMODULES_DEFAULT_ROOT)
+		var path : String = ProjectSettings.get_setting(SUBMODULES_ROOT_SETTINGS_PATH)
 		if path != _last_known_submodules_root:
 			print("Submodule root changed - last known: %s, current: %s" % [_last_known_submodules_root, path])
 			var err := _move_submodules_dir(_last_known_submodules_root, path)
@@ -22,7 +28,7 @@ static var submodules_root := SUBMODULES_DEFAULT_ROOT:
 				return _last_known_submodules_root
 		return path
 
-static var _last_known_submodules_root : String = ProjectSettings.get_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH)
+static var _last_known_submodules_root : String = ProjectSettings.get_setting(SUBMODULES_ROOT_SETTINGS_PATH)
 static var _is_moving_submodule_dir := false
 
 static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:

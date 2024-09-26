@@ -17,6 +17,7 @@ static func _execute_at(path: String, cmd: String, output: Array[String] = []) -
 		true)
 
 # lol couldn't figure out parsing gitignore so just making a zip to list files from :D
+# it needs to run less often though
 class GitArchiveIgnorer extends GitIgnorer:
 	var include_paths : PackedStringArray
 	var error_creating_archive_allow_all : bool
@@ -28,14 +29,12 @@ class GitArchiveIgnorer extends GitIgnorer:
 			var output : Array[String] = []
 			var os_err := _execute_at(path, "git archive --format=zip --output \"%s\" HEAD" % ProjectSettings.globalize_path(zip_file_path), output)
 			if os_err != OK:
-				# print(output[0])
 				error_creating_archive_allow_all = true
 				return
 		var zip_reader := ZIPReader.new()
 		var err := zip_reader.open(zip_file_path)
 		if err != OK:
 			push_error(err)
-		# assert(err == OK)
 		include_paths = zip_reader.get_files()
 		root_path = path
 	

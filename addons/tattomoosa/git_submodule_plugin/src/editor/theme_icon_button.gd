@@ -17,3 +17,7 @@ func _ready() -> void:
 
 func _set_icon() -> void:
 	icon = get_theme_icon(icon_name, theme_name)
+
+func _validate_property(property: Dictionary) -> void:
+	if property.name == "icon":
+		property.usage = PROPERTY_USAGE_NONE | PROPERTY_USAGE_READ_ONLY | PROPERTY_USAGE_EDITOR
