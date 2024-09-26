@@ -23,7 +23,6 @@ static var submodules_root := SUBMODULES_DEFAULT_ROOT:
 		return path
 
 static var _last_known_submodules_root : String = ProjectSettings.get_setting(SUBMODULES_DEFAULT_ROOT_SETTINGS_PATH)
-
 static var _is_moving_submodule_dir := false
 
 static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:

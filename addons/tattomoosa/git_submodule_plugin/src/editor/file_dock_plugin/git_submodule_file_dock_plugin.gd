@@ -1,7 +1,7 @@
 @tool
 extends Control
 
-const PRINT_DEBUG_MESSAGES := false
+const PRINT_DEBUG_MESSAGES := true
 const PRINT_PREFIX := "[GitSubmoduleFileDockPlugin] "
 const FADE_COLOR := Color(1, 1, 1, 0.4)
 
@@ -120,21 +120,23 @@ func patch_dock() -> void:
 # Patch file dock's tree item with git plugin information
 @warning_ignore("return_value_discarded")
 func _patch_addon_folder_item(folder_item: TreeItem, installed_plugins: Dictionary, parent: String = "") -> bool:
-	_print_debug("Patching " + folder_item.get_text(0))
+	_print_debug("Evaluating patch for " + folder_item.get_text(0))
 	var folder_name := folder_item.get_text(0)
+	var from_addons_path := parent.path_join(folder_name)
+	_print_debug("Matching path: " + from_addons_path)
 	var matching_addon_paths : Array[String]
 	matching_addon_paths.assign(
 		installed_plugins.keys().filter(
 			func(x: String) -> bool:
-				return x.begins_with(parent.path_join(folder_name)))
+				return x.begins_with(from_addons_path))
 		)
 	# no match
-	_print_debug("Matching addon paths" + str(matching_addon_paths))
+	_print_debug("Matching addon paths " + str(matching_addon_paths))
 	if matching_addon_paths.is_empty():
 		_print_debug("No matching addon paths found for " + folder_name)
 		return false
 	# one match, patch item
-	if matching_addon_paths.size() == 1 and folder_name == matching_addon_paths[0]:
+	if matching_addon_paths.size() == 1 and from_addons_path == matching_addon_paths[0]:
 		var path := matching_addon_paths[0]
 		# { plugin.name : "plugin", "submodule" }
 		var data : Dictionary = installed_plugins[path]

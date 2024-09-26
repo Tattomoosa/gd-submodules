@@ -23,7 +23,7 @@ enum Column {
 	COLUMN_SIZE
 }
 
-const PRINT_DEBUG_MESSAGES := false 
+const PRINT_DEBUG_MESSAGES := true
 const PRINT_PREFIX := "[GitSubmodulePluginsSettingsTree]"
 const CONFIRM_DELETE_TEXT := "This action will remove %s from your file system."
 const CONFIG_TEXT = """\

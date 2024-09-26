@@ -104,7 +104,6 @@ func install(force := false) -> Error:
 
 func get_config_file() -> ConfigFile:
 	var cf := ConfigFile.new()
-	# print(source_path)
 	var err := cf.load(source_path.path_join("plugin.cfg"))
 	if err != OK:
 		push_error("Error loading config file: ", error_string(err))
