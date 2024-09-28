@@ -284,7 +284,7 @@ static func add_submodule(
 	# var source_folder := submodules_folder.path_join(p_repo)
 	var relative_root := _get_source_folder_relative_to_project_root_static(p_repo)
 	# var author_folder := submodules_folder.path_join(author_name)
-	var git_cmd := "git submodule add %s %s %s %s" % [
+	var git_cmd := "git submodule add -f %s %s %s %s" % [
 			shallow_text,
 			# bare_text,
 			branch,

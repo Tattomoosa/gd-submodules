@@ -102,9 +102,9 @@ func _confirmation_dialog_cancel() -> void:
 	reset()
 
 func _confirmation_dialog_confirm() -> void:
-	l.debug("Removing %s..." % _currently_deleting.repo)
+	l.print("Removing %s..." % _currently_deleting.repo)
 	var err := _currently_deleting.remove()
-	if err != OK: l.debug("FAILED: " + error_string(err))
+	if err != OK: l.error("FAILED: " + error_string(err))
 	else: l.debug("OK")
 	reset()
 
