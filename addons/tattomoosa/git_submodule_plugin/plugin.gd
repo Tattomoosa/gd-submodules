@@ -12,7 +12,7 @@ const L := preload("src/util/logger.gd")
 static var l: L.Logger:
   get: return L.get_logger(L.LogLevel.INFO, &"GitSubmoduleEditorPlugin")
 static var p: L.Logger:
-  get: return L.get_logger(L.LogLevel.DEBUG, &"ProfilerGitSubmoduleEditorPlugin")
+  get: return L.get_logger(L.LogLevel.DEBUG, &"Profiler:GitSubmoduleEditorPlugin")
 
 var submodule_settings := GitSubmoduleSettingsTreeScene.instantiate()
 var file_system_dock_plugin := GitSubmoduleFileDockPugin.new()
@@ -36,7 +36,7 @@ func _enter_tree() -> void:
     )
   stopwatch.restart_and_log("load ProjectSettings", p.info)
   GitSubmodulePlugin.reset_internal_state()
-  stopwatch.restart_and_log("reset internal state", p.info)
+  stopwatch.restart()
   _add_file_dock_plugin()
   stopwatch.restart_and_log("add file dock plugin", p.info)
   add_control_to_container(CONTAINER_PROJECT_SETTING_TAB_RIGHT, submodule_settings)

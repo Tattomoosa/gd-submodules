@@ -35,7 +35,7 @@ func _ready() -> void:
 @warning_ignore("return_value_discarded")
 func initialize() -> void:
 	l.debug("Initializing GitSubmoduleFileDockPlugin")
-	# Non-native Godot icon is big and needs to be resized, would probably be better to do this in the file itself..
+	# TODO Resize source icon to 16x16
 	git_icon = _resize_icon(GIT_ICON.get_image())
 	# TODO placeholder, need better git status icons
 	changes_icon = REPO_CHANGES_ICON
@@ -188,15 +188,16 @@ func _patch_folder_modify_item(folder_item: TreeItem, data: Dictionary) -> void:
 		folder_item.add_button(0, git_icon, 0, false, "Managed by GitSubmodulePlugin")
 
 	if (data["plugin"] as TrackedEditorPluginAccess).is_enabled():
-		folder_item.set_custom_color(0, FADE_COLOR)
+		var accent_color := get_theme_color("accent_color", "Editor")
+		folder_item.set_custom_color(0, Color(accent_color, 0.6))
 		folder_item.set_button_color(0, 0, FADE_COLOR)
 		folder_item.set_button_color(0, 1, FADE_COLOR)
-		folder_item.set_icon_modulate(0, get_theme_color("accent_color", "Editor"))
+		folder_item.set_icon_modulate(0, accent_color)
 	else:
 		folder_item.set_custom_color(0, UNINSTALLED_COLOR)
 		folder_item.set_button_color(0, 1, UNINSTALLED_COLOR)
 		folder_item.set_button_color(0, 0, UNINSTALLED_COLOR)
-		folder_item.set_icon_modulate(0, Color(Color.WHITE, 0.2))
+		folder_item.set_icon_modulate(0, UNINSTALLED_COLOR)
 
 	# git changes
 	if !(data["submodule"] as GitSubmoduleAccess).has_changes():

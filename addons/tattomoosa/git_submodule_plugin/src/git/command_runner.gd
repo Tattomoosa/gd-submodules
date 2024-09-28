@@ -58,5 +58,5 @@ static func _execute_at(path: String, p_cmd: String, output: Array[String] = [])
 		["-lc", os_cmd],
 		output,
 		true)
-	sw.restart_and_log("execute '%s' for %s" % [p_cmd, path], p)
+	sw.restart_and_log("execute '%s' for %s" % [p_cmd, path], p.debug)
 	return err

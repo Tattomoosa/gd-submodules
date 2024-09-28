@@ -1,7 +1,7 @@
 extends RefCounted
 
 
-const GitIgnorer := preload("../git/git_ignorer.gd")
+const Ignorer := preload("../git/git_ignorer.gd")
 
 ## Name used by EditorInterface (path relative to /addons/)
 var name : String
@@ -9,18 +9,15 @@ var name : String
 var source_path : String
 ## Path to root folder in project
 var install_path : String
-var ignorer : GitIgnorer
 
 const ADDONS_FOLDER_PATH := "res://addons/"
 
 func _init(
 	p_source_path: String,
-	p_ignorer: GitIgnorer = null
 ) -> void:
 	source_path = p_source_path
 	name = source_path.get_slice("/addons/", 1)
 	install_path = ADDONS_FOLDER_PATH.path_join(name)
-	ignorer = p_ignorer
 
 func is_enabled() -> bool:
 	return EditorInterface.is_plugin_enabled(name)

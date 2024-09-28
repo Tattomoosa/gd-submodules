@@ -14,8 +14,11 @@ static var l: L.Logger:
 static var p: L.Logger:
 	get: return L.get_logger(L.LogLevel.WARN, "Profiler:GitSubmoduleSettingsTree")
 
+const REPO_CHANGES_ICON := preload("../../icons/GitChanges.svg")
+
 signal working
 signal finished
+signal edit_submodule(submodule: GitSubmoduleAccess)
 
 @export var confirmation_dialog : ConfirmationDialog
 
@@ -29,6 +32,11 @@ enum Column {
 	COMMIT,
 	EDIT,
 	COLUMN_SIZE
+}
+enum RepoColumnButtonIndex {
+	HAS_CHANGES,
+	# TODO can pull
+	CAN_PULL,
 }
 
 const PRINT_DEBUG_MESSAGES := true
@@ -67,7 +75,6 @@ func reset() -> void:
 
 # hard reset, tells plugin to reload all data
 func reset_git_submodule_plugin() -> void:
-	var sw := DebugProfiler.Stopwatch.new()
 	await _set_working()
 	GitSubmodulePlugin.reset_internal_state()
 	reset()
@@ -82,7 +89,6 @@ func build() -> void:
 		var item := root.create_child()
 		item.collapsed = true
 		item.set_metadata(0, submodule)
-		item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"))
 		_build_submodule_tree_item(item)
 		sw.restart_and_log("build submodule tree item for %s" % submodule.repo, p.debug)
 	stopwatch.restart_and_log("build submodule tree", p.info)
@@ -134,6 +140,7 @@ func _ready() -> void:
 
 	set_column_title(Column.EDIT, "Edit")
 	set_column_expand(Column.EDIT, false)
+	set_column_custom_minimum_width(Column.EDIT, 0)
 
 	for c in columns:
 		set_column_title_alignment(c, HORIZONTAL_ALIGNMENT_LEFT)
@@ -145,22 +152,32 @@ func _ready() -> void:
 
 	button_clicked.connect(_button_clicked)
 	item_edited.connect(_item_edited)
-	# visibility_changed.connect(_on_visibility_changed)
+	visibility_changed.connect(_on_visibility_changed)
 	confirmation_dialog.confirmed.connect(_confirmation_dialog_confirm)
 	confirmation_dialog.canceled.connect(_confirmation_dialog_cancel)
+	# Hmmmmmm
+	# EditorInterface.get_resource_filesystem().filesystem_changed.connect(reset_git_submodule_plugin)
 
 # TODO make buttons work
 func _button_clicked(item: TreeItem, col: int, _id: int, mouse_button_index: int) -> void:
 	if mouse_button_index != MOUSE_BUTTON_LEFT:
 		return
 
-	if col != Column.EDIT:
-		push_error("What button at %s?" % col)
-
-	if col == Column.EDIT:
-		item.set_editable(Column.BRANCH, true)
-		item.set_editable(Column.COMMIT, true)
-		return
+	match col:
+		Column.REPO:
+			var meta : Variant = item.get_metadata(0)
+			if meta is GitSubmoduleAccess:
+				var sm := meta as GitSubmoduleAccess
+				# TODO
+				pass
+		Column.EDIT:
+			var meta : Variant = item.get_metadata(0)
+			if meta is GitSubmoduleAccess:
+				var sm := meta as GitSubmoduleAccess
+				edit_submodule.emit(sm)
+			return
+		_:
+			push_error("What button at %s?" % col)
 
 func _on_visibility_changed() -> void:
 	if !is_visible_in_tree():
@@ -245,7 +262,6 @@ func _item_edited() -> void:
 
 	if data is TrackedEditorPluginAccess:
 		var plugin : TrackedEditorPluginAccess = data
-		# var submodule : GitSubmodulePlugin = item.get_parent().get_metadata(0)
 		var _err : Error
 
 		_set_working()
@@ -293,6 +309,7 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 
 	c = Column.REPO
 	item.set_text(c, submodule.repo)
+	item.add_button(c, REPO_CHANGES_ICON, 0)
 
 	c = Column.BRANCH
 	item.set_text(c, submodule.branch_name())
@@ -301,14 +318,17 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 	c = Column.COMMIT
 	var commit := submodule.commit_hash()
 	if commit == "":
-		commit = "None"
+		commit = "-"
 	item.set_text(c, commit)
 	item.set_tooltip_text(c, "Git commit")
 
 	for c_i: int in [Column.REPO, Column.BRANCH, Column.COMMIT]:
 		item.set_selectable(c_i, true)
 
-	item.set_text_alignment(Column.EDIT, HORIZONTAL_ALIGNMENT_CENTER)
+	c = Column.EDIT
+	item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_LEFT)
+	item.set_text(c, "")
+	item.set_cell_mode(c, TreeItem.CELL_MODE_ICON)
 
 	var config_texts : PackedStringArray = []
 	for i in submodule.plugins.size():
@@ -368,13 +388,16 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 		config_item.set_selectable(c, true)
 	var upstream_url := submodule.get_upstream_url() 
 	if upstream_url == "":
-		upstream_url = "No upstream!"
+		upstream_url = "-"
 	item.set_tooltip_text(
 		c,
 		"Upstream: " + upstream_url + "\n"\
 				+ "Contains Plugins:\n"\
 				+ "\n".join(config_texts)
 		)
+
+	item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"), 0)
+	item.add_button(Column.EDIT, get_theme_icon("Terminal", "EditorIcons"), 1)
 
 	_update_submodule_checks(item)
 
@@ -386,6 +409,7 @@ func _update_submodule_checks(item: TreeItem) -> void:
 	var is_tracked := submodule.is_tracked()
 	var has_installed := submodule.has_plugin_installed()
 	var has_enabled := submodule.has_plugin_enabled()
+	var has_changes := submodule.has_changes()
 
 	var c := Column.TRACKED
 	item.set_checked(c, is_tracked)
@@ -441,6 +465,14 @@ func _update_submodule_checks(item: TreeItem) -> void:
 	else:
 		item.set_editable(Column.ACTIVE, false)
 
+	c = Column.REPO
+	if has_changes:
+		item.set_button_color(c, RepoColumnButtonIndex.HAS_CHANGES, CHECKED_ICON_COLOR)
+		item.set_button_tooltip_text(c, RepoColumnButtonIndex.HAS_CHANGES, "Repo has changes")
+	else:
+		item.set_button_color(c, RepoColumnButtonIndex.HAS_CHANGES, Color.TRANSPARENT)
+		item.set_button_tooltip_text(c, RepoColumnButtonIndex.HAS_CHANGES, "Repo has no changes")
+
 	for i in submodule.plugins.size():
 		var plugin := submodule.plugins[i]
 		var plugin_item := item.get_child(i)
@@ -450,7 +482,8 @@ func _update_submodule_checks(item: TreeItem) -> void:
 		# print("%s is_installed? %s is_enabled? %s" % [plugin.name, is_installed, is_enabled])
 		c = Column.LINKED
 		plugin_item.set_checked(c, is_installed)
-		if submodule.has_plugin_installed():
+		# if submodule.has_plugin_installed():
+		if plugin.is_installed():
 			plugin_item.set_icon_modulate(c, CHECKED_ICON_COLOR)
 			plugin_item.set_tooltip_text(c, "Installed in project")
 		else:

@@ -240,6 +240,7 @@ static func clone(
 	upstream_url: String = github_upstream_url(p_repo),
 	branch : String = "",
 	commit: String = "",
+	shallow: bool = false,
 	output: Array[String] = []
 ) -> Error:
 	l.debug("Cloning %s" % p_repo, " from %s" % upstream_url)
@@ -250,10 +251,12 @@ static func clone(
 		return err
 	if !branch.is_empty():
 		branch = "-b " + branch
+	var shallow_text := "--depth=1" if shallow else ""
 	var source_folder := submodules_folder.path_join(p_repo)
-	var git_cmd := "git clone %s %s ." % [
+	var git_cmd := "git clone %s %s %s ." % [
 			branch,
 			upstream_url,
+			shallow_text
 			# commit
 		]
 	os_err = _execute_at(source_folder, git_cmd, output)
