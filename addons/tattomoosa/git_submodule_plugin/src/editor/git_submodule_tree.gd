@@ -38,6 +38,10 @@ enum RepoColumnButtonIndex {
 	# TODO can pull
 	CAN_PULL,
 }
+enum EditColumnButtonIndex {
+	EDIT_REPO,
+	TERMINAL
+}
 
 const PRINT_DEBUG_MESSAGES := true
 const PRINT_PREFIX := "[GitSubmodulePluginsSettingsTree]"
@@ -159,7 +163,7 @@ func _ready() -> void:
 	# EditorInterface.get_resource_filesystem().filesystem_changed.connect(reset_git_submodule_plugin)
 
 # TODO make buttons work
-func _button_clicked(item: TreeItem, col: int, _id: int, mouse_button_index: int) -> void:
+func _button_clicked(item: TreeItem, col: int, id: int, mouse_button_index: int) -> void:
 	if mouse_button_index != MOUSE_BUTTON_LEFT:
 		return
 
@@ -174,7 +178,17 @@ func _button_clicked(item: TreeItem, col: int, _id: int, mouse_button_index: int
 			var meta : Variant = item.get_metadata(0)
 			if meta is GitSubmoduleAccess:
 				var sm := meta as GitSubmoduleAccess
-				edit_submodule.emit(sm)
+				match id:
+					EditColumnButtonIndex.EDIT_REPO:
+						edit_submodule.emit(sm)
+					EditColumnButtonIndex.TERMINAL:
+						var editor_settings := EditorInterface.get_editor_settings()
+						var terminal : String = editor_settings.get_setting("filesystem/external_programs/terminal_emulator")
+						var flags : String = editor_settings.get_setting("filesystem/external_programs/terminal_emulator_flags")
+						flags = flags.format({"directory": ProjectSettings.globalize_path(sm.source_path)})
+						var os_err := OS.create_process(terminal, flags.split(" "))
+						if os_err < 0:
+							l.error("Could not open terminal '%s %s'" % [terminal, flags])
 			return
 		_:
 			push_error("What button at %s?" % col)
@@ -329,6 +343,10 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 	item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_LEFT)
 	item.set_text(c, "")
 	item.set_cell_mode(c, TreeItem.CELL_MODE_ICON)
+	item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"), EditColumnButtonIndex.EDIT_REPO)
+	item.add_button(Column.EDIT, get_theme_icon("Terminal", "EditorIcons"), EditColumnButtonIndex.TERMINAL)
+	item.set_button_tooltip_text(Column.EDIT, EditColumnButtonIndex.EDIT_REPO, "Open submodule edit window")
+	item.set_button_tooltip_text(Column.EDIT, EditColumnButtonIndex.TERMINAL, "Open terminal at submodule source root")
 
 	var config_texts : PackedStringArray = []
 	for i in submodule.plugins.size():
@@ -395,9 +413,6 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 				+ "Contains Plugins:\n"\
 				+ "\n".join(config_texts)
 		)
-
-	item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"), 0)
-	item.add_button(Column.EDIT, get_theme_icon("Terminal", "EditorIcons"), 1)
 
 	_update_submodule_checks(item)
 

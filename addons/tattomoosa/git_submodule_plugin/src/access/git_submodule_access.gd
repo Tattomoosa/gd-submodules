@@ -243,7 +243,7 @@ static func clone(
 	shallow: bool = false,
 	output: Array[String] = []
 ) -> Error:
-	l.debug("Cloning %s" % p_repo, " from %s" % upstream_url)
+	l.info("Cloning %s" % p_repo, " from %s" % upstream_url)
 	var err : Error
 	var os_err : int
 	err = _make_dir(p_repo)
@@ -263,8 +263,23 @@ static func clone(
 	if os_err != OK:
 		push_error(output)
 		return FAILED
-	l.debug("Cloned %s" % p_repo)
+	l.info("Cloned %s" % p_repo)
 	return err
+
+func checkout(
+	branch: String = "",
+	commit: String = "",
+	output: Array[String] = []
+) -> Error:
+	var checkout_string := branch if commit.is_empty() else commit
+	l.info("Checking out %s" % checkout_string)
+	var git_cmd := "git checkout %s" % checkout_string
+	var os_err := _execute_at(source_path, git_cmd, output)
+	if os_err != OK:
+		push_error(output)
+		return FAILED
+	l.info("Checked out %s" % checkout_string)
+	return OK
 
 func init(output : Array[String] = []) -> int:
 	var err : int

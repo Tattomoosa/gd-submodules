@@ -12,7 +12,7 @@ const L := preload("src/util/logger.gd")
 static var l: L.Logger:
   get: return L.get_logger(L.LogLevel.INFO, &"GitSubmoduleEditorPlugin")
 static var p: L.Logger:
-  get: return L.get_logger(L.LogLevel.DEBUG, &"Profiler:GitSubmoduleEditorPlugin")
+  get: return L.get_logger(L.LogLevel.WARN, &"Profiler:GitSubmoduleEditorPlugin")
 
 var submodule_settings := GitSubmoduleSettingsTreeScene.instantiate()
 var file_system_dock_plugin := GitSubmoduleFileDockPugin.new()

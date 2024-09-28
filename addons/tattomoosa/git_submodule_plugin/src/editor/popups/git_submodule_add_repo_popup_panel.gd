@@ -85,7 +85,7 @@ func add_repo() -> void:
 	var upstream_url := (origin_string % repo)\
 		if "%s" in origin_string\
 		else origin_string
-	output.append_text(
+	output.print(
 		"Cloning from %s into %s..." % [
 			upstream_url,
 			GitSubmodulePlugin.submodules_root.path_join(repo)
@@ -99,9 +99,10 @@ func add_repo() -> void:
 		branch,
 		commit,
 		shallow,
+		out,
 	)
-	if err != OK:
-		push_error("Error cloning %s " % repo, " ",error_string(err))
+	# if err != OK:
+		# push_error("Error cloning %s " % repo, " ",error_string(err))
 	output.loading = false
 	if err != OK:
 		output.print(
