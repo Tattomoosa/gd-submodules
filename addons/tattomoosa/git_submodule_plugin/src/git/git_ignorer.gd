@@ -1,6 +1,14 @@
 extends RefCounted
 
 const GitIgnorer := preload("./git_ignorer.gd")
+const DebugProfiler := preload("../util/profiler.gd")
+
+# Logger
+const L := preload("../util/logger.gd")
+static var l: L.Logger:
+	get: return L.get_logger(L.LogLevel.INFO, "GitIgnorer")
+static var p: L.Logger:
+	get: return L.get_logger(L.LogLevel.WARN, "Profiler:GitIgnorer")
 
 var root_path : String = "/"
 
@@ -9,7 +17,7 @@ func ignores_path(_path: String) -> bool:
 
 static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
-	# print_debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
+	l.debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
 	return OS.execute(
 		"$SHELL",
 		["-lc", 'cd \"%s\" && %s' % [path, cmd]],
@@ -21,13 +29,25 @@ static func _execute_at(path: String, cmd: String, output: Array[String] = []) -
 class GitArchiveIgnorer extends GitIgnorer:
 	var include_paths : PackedStringArray
 	var error_creating_archive_allow_all : bool
+	var repo_path : String
+	var zip_file_path : String
 
 	# TODO implement only read
-	func _init(path: String, zip_file_path: String, only_read: bool = false) -> void:
-		print("Creating zip archive of %s at %s" % [path, zip_file_path])
+	func _init(path: String, p_zip_file_path: String, only_read: bool = false) -> void:
+		repo_path = path
+		zip_file_path = p_zip_file_path
+		if only_read:
+			l.debug("Using cached zip archive of %s at %s" % [path, zip_file_path])
+			if !DirAccess.dir_exists_absolute(zip_file_path):
+				only_read = false
+				l.debug("Cached zip archive not found")
 		if !only_read:
+			var sw := DebugProfiler.Stopwatch.new()
+			l.debug("Creating zip archive of %s at %s" % [path, zip_file_path])
 			var output : Array[String] = []
 			var os_err := _execute_at(path, "git archive --format=zip --output \"%s\" HEAD" % ProjectSettings.globalize_path(zip_file_path), output)
+			# p.print("Took %sms to create zip archive" % sw.restart())
+			sw.restart_and_log("create zip archive", p.info)
 			if os_err != OK:
 				error_creating_archive_allow_all = true
 				return
@@ -39,14 +59,21 @@ class GitArchiveIgnorer extends GitIgnorer:
 		root_path = path
 	
 	func ignores_path(path: String) -> bool:
-		# print(path, "\n", include_paths)
 		if error_creating_archive_allow_all:
 			return false
 		for include_path in include_paths:
 			if include_path.begins_with(path):
 				return false
 		return true
-		# return path not in include_paths
+	
+	func _notification(what: int) -> void:
+		match what:
+			NOTIFICATION_PREDELETE:
+				var err := DirAccess.remove_absolute(zip_file_path)
+				if err == OK:
+					l.debug("Removed zip archive at ", zip_file_path)
+				else:
+					l.warn("Could not remove zip archive at ", zip_file_path)
 
 # TODO this doesn't work at all...
 # based on: https://github.com/mherrmann/gitignore_parser/blob/master/gitignore_parser.py
@@ -148,118 +175,118 @@ class GitAttributesIgnorer extends GitIgnorer:
 			anchored
 		)
 
-class GitIgnoreRule:
-	var original_pattern : String
-	var pattern : String
-	var parsed_pattern : String
-	var root_path : String
-	var negated : bool
-	var regex : RegEx
+	class GitIgnoreRule:
+		var original_pattern : String
+		var pattern : String
+		var parsed_pattern : String
+		var root_path : String
+		var negated : bool
+		var regex : RegEx
 
-	func _init(
-		p_original_pattern: String,
-		p_pattern: String,
-		p_root_path: String,
-		p_negated: bool,
-		p_directory_only: bool,
-		p_anchored: bool
-	) -> void:
-		original_pattern = p_original_pattern
-		pattern = p_pattern
-		root_path = p_root_path
-		negated = p_negated
-		regex = RegEx.create_from_string(_pattern_to_regex(
-			p_directory_only,
-			p_anchored
-		))
-		print(regex.get_pattern())
+		func _init(
+			p_original_pattern: String,
+			p_pattern: String,
+			p_root_path: String,
+			p_negated: bool,
+			p_directory_only: bool,
+			p_anchored: bool
+		) -> void:
+			original_pattern = p_original_pattern
+			pattern = p_pattern
+			root_path = p_root_path
+			negated = p_negated
+			regex = RegEx.create_from_string(_pattern_to_regex(
+				p_directory_only,
+				p_anchored
+			))
+			print(regex.get_pattern())
 
-	func match(path: String) -> bool:
-		if path == "":
-			return false
-		if path.begins_with(root_path):
-			path = "/" + path.trim_prefix(root_path)
-		if negated and path[-1] == "/":
-			path += "/"
-		if path.begins_with("./"):
-			path = path.substr(2)
-		var matches := regex.search(path)
-		print("matching path: ", path, " with pattern: ", regex.get_pattern())
-		print(matches != null)
-		return matches != null
-	
-	func _pattern_to_regex(
-		directory_only: bool = false,
-		anchored: bool = false
-	) -> String:
-		var i := 0
-		var n := pattern.length()
+		func match(path: String) -> bool:
+			if path == "":
+				return false
+			if path.begins_with(root_path):
+				path = "/" + path.trim_prefix(root_path)
+			if negated and path[-1] == "/":
+				path += "/"
+			if path.begins_with("./"):
+				path = path.substr(2)
+			var matches := regex.search(path)
+			print("matching path: ", path, " with pattern: ", regex.get_pattern())
+			print(matches != null)
+			return matches != null
+		
+		func _pattern_to_regex(
+			directory_only: bool = false,
+			anchored: bool = false
+		) -> String:
+			var i := 0
+			var n := pattern.length()
 
-		# not needed in godot
-		# seps = [re.escape(os.sep)]
-		# TODO idk
-		# if os.altsep is not None:
-	#    seps.append(re.escape(os.altsep))
+			# not needed in godot
+			# seps = [re.escape(os.sep)]
+			# TODO idk
+			# if os.altsep is not None:
+		#    seps.append(re.escape(os.altsep))
 
-		var separator_group := r"[\/]"
-		var non_separator_group := r"[^\/]"
+			var separator_group := r"[\/]"
+			var non_separator_group := r"[^\/]"
 
-		var results := []
-		while i < n:
-			var c := pattern[i]
-			i += 1
-			if c == "*":
-				if i >= n:
-					results.append("".join([non_separator_group, "*"]))
-				elif pattern[i] == "*":
-					i += 1
+			var results := []
+			while i < n:
+				var c := pattern[i]
+				i += 1
+				if c == "*":
 					if i >= n:
 						results.append("".join([non_separator_group, "*"]))
-					elif i < n and pattern[i] == "/":
+					elif pattern[i] == "*":
 						i += 1
 						if i >= n:
 							results.append("".join([non_separator_group, "*"]))
+						elif i < n and pattern[i] == "/":
+							i += 1
+							if i >= n:
+								results.append("".join([non_separator_group, "*"]))
+							else:
+								results.append("".join([r"(.*", separator_group, ")?"]))
 						else:
-							results.append("".join([r"(.*", separator_group, ")?"]))
+							results.append(".*")
 					else:
-						results.append(".*")
+						results.append("".join([non_separator_group, "*"]))
+				elif c == "?":
+					results.append(non_separator_group)
+				elif c == "/":
+					results.append(separator_group)
+				elif c == "[":
+					var j := i
+					if j < n and pattern[j] == "!":
+						j += 1
+					if j < n and pattern[j] == "]":
+						j += 1
+					while j < n and pattern[j] != "]":
+						j += 1
+					if j >= n:
+						results.append(r"\[")
+					else:
+						# var stuff := pattern.slice(i, j).replace("\\", "\\\\").replace("/", "")
+						var stuff := pattern.substr(i, j - i).replace("\\", "\\\\").replace("/", "")
+						i = j + 1
+						if stuff[0] == "!":
+							stuff = "".join(["^", stuff.substr(1)])
+						elif stuff[0] == "^":
+							stuff = "\\" + stuff
+						results.append("[%s]" % stuff)
 				else:
-					results.append("".join([non_separator_group, "*"]))
-			elif c == "?":
-				results.append(non_separator_group)
-			elif c == "/":
-				results.append(separator_group)
-			elif c == "[":
-				var j := i
-				if j < n and pattern[j] == "!":
-					j += 1
-				if j < n and pattern[j] == "]":
-					j += 1
-				while j < n and pattern[j] != "]":
-					j += 1
-				if j >= n:
-					results.append(r"\[")
-				else:
-					# var stuff := pattern.slice(i, j).replace("\\", "\\\\").replace("/", "")
-					var stuff := pattern.substr(i, j - i).replace("\\", "\\\\").replace("/", "")
-					i = j + 1
-					if stuff[0] == "!":
-						stuff = "".join(["^", stuff.substr(1)])
-					elif stuff[0] == "^":
-						stuff = "\\" + stuff
-					results.append("[%s]" % stuff)
+					# TODO what escaping is done here?
+					# res.append(re.escape(c))
+					results.append(c)
+			if anchored:
+				results.push_front("^")
 			else:
-				# TODO what escaping is done here?
-				# res.append(re.escape(c))
-				results.append(c)
-		if anchored:
-			results.push_front("^")
-		else:
-			results.push_front("(^|%s)" % separator_group)
-		if not directory_only:
-			results.append("$")
-		elif directory_only and negated:
-			results.append("/$")
-		else:
-			results.append(r"($|\/)")
-		return "".join(results)
+				results.push_front("(^|%s)" % separator_group)
+			if not directory_only:
+				results.append("$")
+			elif directory_only and negated:
+				results.append("/$")
+			else:
+				results.append(r"($|\/)")
+			return "".join(results)

@@ -3,6 +3,10 @@ extends PopupPanel
 
 signal added
 
+const L := preload("../../util/logger.gd")
+static var _l: L.Logger:
+	get: return L.get_logger(L.LogLevel.INFO, &"GitSubmoduleEditorPlugin")
+
 enum Origin {
 	GITHUB,
 	NUL_SEP,
@@ -47,7 +51,6 @@ func _on_edit_changed() -> void:
 
 	var commit_text := commit_edit.text
 
-
 	output.clear()
 	output.print(color_tag,
 			"git clone ",
@@ -81,7 +84,6 @@ func add_repo() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var out : Array[String] = []
-	print("does upstream exist here?", upstream_url)
 	var err := GitSubmoduleAccess.clone(
 		repo,
 		upstream_url,

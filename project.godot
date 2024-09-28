@@ -12,6 +12,11 @@ config_version=5
 
 config/features=PackedStringArray("4.3")
 
+[autoload]
+
+BeehaveGlobalMetrics="*res://addons/beehave/metrics/beehave_global_metrics.gd"
+BeehaveGlobalDebugger="*res://addons/beehave/debug/global_debugger.gd"
+
 [debug]
 
 gdscript/warnings/exclude_addons=false
@@ -32,3 +37,6 @@ paths/submodules_root="res://.submodules"
 
 settings/submodule_folder="res://.submodules"
 settings/use_file_dock_plugin=true
+settings/paths/submodule_folder="res://.submodules"
+settings/paths/config="res://.submodules.cfg"
+settings/paths/submodules_config="res://.submodules/submodules.cfg"

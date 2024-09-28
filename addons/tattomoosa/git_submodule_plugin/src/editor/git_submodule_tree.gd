@@ -6,6 +6,14 @@ const GitSubmodulePlugin := preload("../git_submodule_plugin.gd")
 const GitSubmoduleAccess := GitSubmodulePlugin.GitSubmoduleAccess
 const TrackedEditorPluginAccess := GitSubmodulePlugin.TrackedEditorPluginAccess
 
+# Logger
+const L := preload("../util/logger.gd")
+const DebugProfiler := preload("../util/profiler.gd")
+static var l: L.Logger:
+	get: return L.get_logger(L.LogLevel.INFO, "GitSubmoduleSettingsTree")
+static var p: L.Logger:
+	get: return L.get_logger(L.LogLevel.WARN, "Profiler:GitSubmoduleSettingsTree")
+
 signal working
 signal finished
 
@@ -45,9 +53,9 @@ var submodules : Array[GitSubmoduleAccess]
 var _currently_deleting : GitSubmoduleAccess = null
 
 func reset() -> void:
-	_print_debug("Tree reloading...")
+	l.debug("Tree reloading...")
 	if !is_visible_in_tree():
-		_print_debug("Tree not visible. Cancelled reload.")
+		l.debug("Tree not visible. Cancelled reload.")
 		return
 	await _set_working()
 	for child in get_root().get_children():
@@ -55,34 +63,39 @@ func reset() -> void:
 	submodules.clear()
 	build()
 	_set_finished()
-	_print_debug("Tree reloaded")
+	l.debug("Tree reloaded")
 
 # hard reset, tells plugin to reload all data
 func reset_git_submodule_plugin() -> void:
+	var sw := DebugProfiler.Stopwatch.new()
+	await _set_working()
 	GitSubmodulePlugin.reset_internal_state()
 	reset()
 
 func build() -> void:
+	var stopwatch := DebugProfiler.Stopwatch.new()
 	var root := get_root()
 	var tracked_submodules := GitSubmodulePlugin.get_tracked_submodules()
 	for submodule in tracked_submodules:
+		var sw := DebugProfiler.Stopwatch.new()
 		submodules.push_back(submodule)
 		var item := root.create_child()
 		item.collapsed = true
 		item.set_metadata(0, submodule)
 		item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"))
-		# item.add_button(Column.EDIT, get_theme_icon("PluginScript", "EditorIcons"))
 		_build_submodule_tree_item(item)
+		sw.restart_and_log("build submodule tree item for %s" % submodule.repo, p.debug)
+	stopwatch.restart_and_log("build submodule tree", p.info)
 
 func _confirmation_dialog_cancel() -> void:
 	_currently_deleting = null
 	reset()
 
 func _confirmation_dialog_confirm() -> void:
-	_print_debug("Removing %s..." % _currently_deleting.repo)
+	l.debug("Removing %s..." % _currently_deleting.repo)
 	var err := _currently_deleting.remove()
-	if err != OK: _print_debug("FAILED: " + error_string(err))
-	else: _print_debug("OK")
+	if err != OK: l.debug("FAILED: " + error_string(err))
+	else: l.debug("OK")
 	reset()
 
 @warning_ignore("return_value_discarded")
@@ -132,7 +145,7 @@ func _ready() -> void:
 
 	button_clicked.connect(_button_clicked)
 	item_edited.connect(_item_edited)
-	visibility_changed.connect(_on_visibility_changed)
+	# visibility_changed.connect(_on_visibility_changed)
 	confirmation_dialog.confirmed.connect(_confirmation_dialog_confirm)
 	confirmation_dialog.canceled.connect(_confirmation_dialog_cancel)
 
@@ -151,10 +164,10 @@ func _button_clicked(item: TreeItem, col: int, _id: int, mouse_button_index: int
 
 func _on_visibility_changed() -> void:
 	if !is_visible_in_tree():
-		_print_debug("Visibility changed to false, doing nothing.")
+		l.debug("Visibility changed to false, doing nothing.")
 		return
 	if visible:
-		_print_debug("Visibility changed to true, triggering reset")
+		l.debug("Visibility changed to true, triggering reset")
 		reset()
 	# var root := get_root()
 	# if !root:
@@ -172,7 +185,7 @@ func _set_finished() -> void:
 	finished.emit()
 
 func _item_edited() -> void:
-	_print_debug("Tree item edited")
+	l.debug("Tree item edited")
 	var item := get_selected()
 	var col := get_selected_column()
 	var data : Variant = item.get_metadata(0)
@@ -187,10 +200,10 @@ func _item_edited() -> void:
 			Column.TRACKED:
 				if checked:
 					pass
-					# _print_debug("Cloning %s...")
+					# l.debug("Cloning %s...")
 					# _err = submodule.clone()
-					# if _err != OK: _print_debug("FAILED")
-					# else: _print_debug("OK")
+					# if _err != OK: l.debug("FAILED")
+					# else: l.debug("OK")
 					# EditorInterface.get_resource_filesystem().scan()
 				else:
 					_currently_deleting = submodule
@@ -201,32 +214,32 @@ func _item_edited() -> void:
 			Column.LINKED:
 				var indeterminate := _is_in_project_indeterminate(submodule)
 				if indeterminate:
-					_print_debug("INDETERMINATE - setting checked false")
+					l.debug("INDETERMINATE - setting checked false")
 					checked = false
 				item.set_checked(col, checked)
 				if checked:
-					_print_debug("Installing all plugins in %s..." % submodule.repo)
+					l.debug("Installing all plugins in %s..." % submodule.repo)
 					var success := submodule.install_all_plugins()
-					if success: _print_debug("OK");
-					else: _print_debug("FAILURE");
+					if success: l.debug("OK");
+					else: l.debug("FAILURE");
 				else:
-					_print_debug("Uninstalling all plugins in %s..." % submodule.repo)
+					l.debug("Uninstalling all plugins in %s..." % submodule.repo)
 					var success := submodule.uninstall_all_plugins()
-					if success: _print_debug("OK");
-					else: _print_debug("FAILURE");
+					if success: l.debug("OK");
+					else: l.debug("FAILURE");
 				EditorInterface.get_resource_filesystem().scan()
 			Column.ACTIVE:
 				var indeterminate := _is_enabled_indeterminate(submodule)
 				if indeterminate:
-					_print_debug("INDETERMINATE - setting checked false")
+					l.debug("INDETERMINATE - setting checked false")
 					checked = false
 				item.set_checked(col, checked)
 				for plugin in submodule.plugins:
 					if checked:
-						_print_debug("Enabling %s..." % plugin.name)
+						l.debug("Enabling %s..." % plugin.name)
 						plugin.enable()
 					else:
-						_print_debug("Disabling %s..." % plugin.name)
+						l.debug("Disabling %s..." % plugin.name)
 						plugin.disable()
 		_update_submodule_checks.call_deferred(item)
 
@@ -239,18 +252,18 @@ func _item_edited() -> void:
 		match col:
 			Column.LINKED:
 				if checked:
-					_print_debug("Installing plugin %s..." % plugin.name)
+					l.debug("Installing plugin %s..." % plugin.name)
 					var err := plugin.install()
-					if err != OK: _print_debug("Failed")
-					else: _print_debug("OK")
+					if err != OK: l.debug("Failed")
+					else: l.debug("OK")
 				else:
-					_print_debug("Uninstalling plugin %s..." % plugin.name)
+					l.debug("Uninstalling plugin %s..." % plugin.name)
 					var err := plugin.uninstall()
-					if err != OK: _print_debug("Failed")
-					else: _print_debug("OK")
+					if err != OK: l.debug("Failed")
+					else: l.debug("OK")
 				EditorInterface.get_resource_filesystem().scan()
 			Column.ACTIVE:
-				_print_debug("Enabling %s..." % plugin.name)
+				l.debug("Enabling %s..." % plugin.name)
 				plugin.set_enabled(checked)
 		_update_submodule_checks.call_deferred(item.get_parent())
 
@@ -280,7 +293,6 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 
 	c = Column.REPO
 	item.set_text(c, submodule.repo)
-	# item.set_tooltip_text(c, )
 
 	c = Column.BRANCH
 	item.set_text(c, submodule.branch_name())
@@ -341,7 +353,7 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 			cfg_file.get_value("plugin", "author", ""),
 			cfg_version,
 			cfg_file.get_value("plugin", "script", ""),
-			plugin.source_path
+			plugin.install_path
 		]
 		@warning_ignore("return_value_discarded")
 		config_texts.append("%s v%s" % [cfg_name, cfg_version])
@@ -464,7 +476,3 @@ func _is_in_project_indeterminate(submodule: GitSubmoduleAccess) -> bool:
 
 func _is_enabled_indeterminate(submodule: GitSubmoduleAccess) -> bool:
 	return !submodule.has_all_plugins_enabled() and submodule.has_plugin_enabled()
-
-func _print_debug(msg: Variant) -> void:
-	if PRINT_DEBUG_MESSAGES:
-		print_debug(PRINT_PREFIX, " ", msg)

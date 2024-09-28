@@ -21,3 +21,11 @@ func _set_icon() -> void:
 func _validate_property(property: Dictionary) -> void:
 	if property.name == "icon":
 		property.usage = PROPERTY_USAGE_NONE | PROPERTY_USAGE_READ_ONLY | PROPERTY_USAGE_EDITOR
+	if property.name == "icon_name":
+		property.hint = PROPERTY_HINT_ENUM_SUGGESTION
+		var icons : Array[String] = []
+		var editor_theme := EditorInterface.get_editor_theme()
+		var type_list := editor_theme.get_icon_type_list()
+		for t in type_list:
+			icons.append_array(editor_theme.get_icon_list(t))
+		property.hint_string = ",".join(icons)

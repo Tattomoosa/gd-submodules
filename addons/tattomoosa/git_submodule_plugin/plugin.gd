@@ -6,25 +6,42 @@ const GitSubmoduleSettingsTreeScene := preload("./src/editor/git_submodule_proje
 const GitSubmoduleFileDockPugin := preload(
     "./src/editor/file_dock_plugin/git_submodule_file_dock_plugin.gd"
 )
+const EditorProfiler := preload("src/util/profiler.gd")
+
+const L := preload("src/util/logger.gd")
+static var l: L.Logger:
+  get: return L.get_logger(L.LogLevel.INFO, &"GitSubmoduleEditorPlugin")
+static var p: L.Logger:
+  get: return L.get_logger(L.LogLevel.DEBUG, &"ProfilerGitSubmoduleEditorPlugin")
 
 var submodule_settings := GitSubmoduleSettingsTreeScene.instantiate()
 var file_system_dock_plugin := GitSubmoduleFileDockPugin.new()
 var default_plugin_window : Control
 
 const PROJECT_SETTINGS_DEFAULTS = {
-  "git_submodules/settings/submodule_folder": "res://.submodules",
+  GitSubmodulePlugin.SETTINGS_PATH_SUBMODULES_ROOT: "res://.submodules",
+  GitSubmodulePlugin.SETTINGS_PATH_SUBMODULES_CONFIG_FILE: "res://.submodules/submodules.cfg",
   "git_submodules/settings/use_file_dock_plugin": true,
 }
 
 func _enter_tree() -> void:
-  _add_file_dock_plugin()
-  add_control_to_container(CONTAINER_PROJECT_SETTING_TAB_RIGHT, submodule_settings)
-  submodule_settings.get_parent().move_child(submodule_settings, 4)
+  await get_tree().process_frame
+  await get_tree().process_frame
+  EditorInterface.get_editor_settings().erase("git_submodule_plugin/submodules_root")
+  var stopwatch := EditorProfiler.Stopwatch.new()
   for project_setting: String in PROJECT_SETTINGS_DEFAULTS.keys():
     _set_setting_to_default_if_not_found(
       project_setting,
       PROJECT_SETTINGS_DEFAULTS[project_setting]
     )
+  stopwatch.restart_and_log("load ProjectSettings", p.info)
+  GitSubmodulePlugin.reset_internal_state()
+  stopwatch.restart_and_log("reset internal state", p.info)
+  _add_file_dock_plugin()
+  stopwatch.restart_and_log("add file dock plugin", p.info)
+  add_control_to_container(CONTAINER_PROJECT_SETTING_TAB_RIGHT, submodule_settings)
+  submodule_settings.get_parent().move_child(submodule_settings, 4)
+  stopwatch.restart_and_log("add settings panel", p.info)
 
 func _exit_tree() -> void:
   _remove_file_dock_plugin()

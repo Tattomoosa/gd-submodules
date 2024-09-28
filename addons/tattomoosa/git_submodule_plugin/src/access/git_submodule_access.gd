@@ -5,10 +5,16 @@ const TrackedEditorPluginAccess := preload("./tracked_editor_plugin_access.gd")
 const GitIgnorer := preload("../git/git_ignorer.gd")
 const GitArchiveIgnorer := GitIgnorer.GitArchiveIgnorer
 
+const DebugProfiler := preload("../util/profiler.gd")
+const L := preload("../util/logger.gd")
+static var l: L.Logger:
+	get: return L.get_logger(L.LogLevel.WARN, &"GitSubmoduleAccess")
+static var p: L.Logger:
+	get: return L.get_logger(L.LogLevel.WARN, &"Profiler:GitSubmoduleAccess")
+
 var repo : String
 var source_path : String
 var plugins : Array[TrackedEditorPluginAccess]
-var ignorer : GitArchiveIgnorer
 
 static var submodules_folder : String:
 	get: return GitSubmodulePlugin.submodules_root
@@ -20,22 +26,23 @@ var repo_name : String:
 func _init(p_repo: String) -> void:
 	repo = p_repo
 	source_path = submodules_folder.path_join(repo)
-	push_warning("%s has changes: " % repo, has_changes())
-	var zip_file_path := submodules_folder.path_join(repo.replace("/", ".") + "." + commit_hash() +  ".zip")
-	# Tells ignorer not to make a new archive
-	var only_read := FileAccess.file_exists(zip_file_path) and !has_changes()
-	ignorer = GitArchiveIgnorer.new(
-		source_path,
-		zip_file_path,
-		only_read
-	)
+	var sw := DebugProfiler.Stopwatch.new()
 	plugins = _get_plugins()
+	# sw.restart_and_log(
+	# 	"load submodule plugins: %s" % plugins\
+	# 		.map(func(x: TrackedEditorPluginAccess) -> String: return x.name),
+	# 		p.info
+	# 	)
 
 func _get_plugins() -> Array[TrackedEditorPluginAccess]:
+	var sw := DebugProfiler.Stopwatch.new()
 	var roots := _find_plugin_roots()
+	sw.restart_and_log("find plugin roots", p.debug)
 	var plugs : Array[TrackedEditorPluginAccess] = []
 	for root in roots:
-		plugs.push_back(TrackedEditorPluginAccess.new(root))
+		var plug := TrackedEditorPluginAccess.new(root)
+		plugs.push_back(plug)
+		sw.restart_and_log("load plugin %s" % plug.name, p.debug)
 	return plugs
 
 func get_plugin(plugin_name: String) -> TrackedEditorPluginAccess:
@@ -60,12 +67,16 @@ func uninstall_all_plugins() -> bool:
 			all_uninstalled = false
 	return all_uninstalled
 
-func get_upstream_url() -> String:
+func get_upstream_url(cached := true) -> String:
+	if cached and GitSubmodulePlugin.has_submodule_setting(repo, "remote_origin_url"):
+		return GitSubmodulePlugin.get_submodule_setting(repo, "remote_origin_url")
 	var output : Array[String] = []
 	var os_err := _execute_at_source_path("git config --get remote.origin.url", output)
 	if os_err != OK:
 		return ""
-	return output[0].trim_suffix("\n")
+	var origin := output[0].trim_suffix("\n")
+	GitSubmodulePlugin.set_submodule_setting(repo, "remote_origin_url", origin)
+	return origin
 
 func install_all_plugins() -> bool:
 	var all_installed := true
@@ -78,21 +89,38 @@ func install_all_plugins() -> bool:
 	return all_installed
 
 func _find_plugin_roots() -> Array[String]:
+	var commit := commit_hash(true, false)
+	var branch := branch_name(false)
+	var plugin_roots : Array[String]
+	var sw := DebugProfiler.Stopwatch.new()
+	if !has_changes(false):
+		if GitSubmodulePlugin.has_submodule_setting(repo, "plugin_roots"):
+			var commit_in_settings : String = GitSubmodulePlugin.get_submodule_setting(repo, "commit", "")
+			var branch_in_settings : String  = GitSubmodulePlugin.get_submodule_setting(repo, "branch", "")
+			if commit_in_settings == commit and branch_in_settings == branch:
+				l.debug("returning plugin roots from settings")
+				sw.restart_and_log("get plugin roots for %s (from settings)" % repo, p.debug)
+				return GitSubmodulePlugin.get_submodule_setting(repo, "plugin_roots")
 	var addons_path := source_path.path_join("addons")
-	var plugin_roots := _find_plugin_roots_recursive(addons_path)
+	var zip_file_path := submodules_folder.path_join(repo.replace("/", ".") + "." + commit_hash() +  ".zip")
+	var ignorer := GitArchiveIgnorer.new(source_path, zip_file_path)
+	l.debug("Finding plugin roots in filesystem...")
+	plugin_roots = _find_plugin_roots_recursive(addons_path, ignorer)
+	sw.restart_and_log("find plugin roots for %s (from parsing filesystem)" % repo, p.debug)
+	GitSubmodulePlugin.set_submodule_setting(repo, "commit", commit)
+	GitSubmodulePlugin.set_submodule_setting(repo, "branch", branch)
+	GitSubmodulePlugin.set_submodule_setting(repo, "plugin_roots", plugin_roots)
+	sw.restart_and_log("update settings", p.debug)
 	return plugin_roots
 
-# func _get_submodule_cache() -> Array[String]:
-
-
-func _find_plugin_roots_recursive(path: String) -> Array[String]:
+func _find_plugin_roots_recursive(path: String, ignorer: GitArchiveIgnorer) -> Array[String]:
 	var dir := DirAccess.open(path)
 	if !dir:
 		return []
 	# TODO might have to change or move into GitArchiveIgnorer if using another ignorer
 	var ignorer_trim_path_prefix := source_path + "/"
 	if ignorer.ignores_path(path.replace(ignorer_trim_path_prefix, "") + "/"):
-		print("Path %s ignored by ignorer" % path.replace(ignorer_trim_path_prefix, "") + "/")
+		l.debug("Path %s ignored by ignorer" % path.replace(ignorer_trim_path_prefix, "") + "/")
 		return []
 	dir.include_hidden = true
 	for file in dir.get_files():
@@ -102,7 +130,7 @@ func _find_plugin_roots_recursive(path: String) -> Array[String]:
 			return [path]
 	var cfg_paths : Array[String] = []
 	for d in dir.get_directories():
-		cfg_paths.append_array(_find_plugin_roots_recursive(path.path_join(d)))
+		cfg_paths.append_array(_find_plugin_roots_recursive(path.path_join(d), ignorer))
 	return cfg_paths
 
 func remove() -> Error:
@@ -125,7 +153,8 @@ func remove() -> Error:
 	return FAILED
 
 func _execute_at_source_path(cmd: String, output: Array[String] = []) -> int:
-	return _execute_at(source_path, cmd, output)
+	var err := _execute_at(source_path, cmd, output)
+	return err
 
 # Walks up filesystem removing empty directories until it hits a non-empty directory
 func _dir_cleanup(path: String) -> Error:
@@ -150,29 +179,38 @@ static func _make_dir(p_repo: String) -> Error:
 		return ERR_ALREADY_EXISTS
 	return dir.make_dir_recursive(p_repo)
 
-static func github_upstream_url(p_repo: String) -> String:
-	return "git@github.com:%s.git" % p_repo
-
-func commit_hash(short := true) -> String:
+func commit_hash(short := true, use_cached := true) -> String:
+	if use_cached and GitSubmodulePlugin.has_submodule_setting(repo, "commit"):
+		return GitSubmodulePlugin.get_submodule_setting(repo, "commit")
 	var output : Array[String] = []
 	var short_arg := "--short" if short else ""
 	var os_err := _execute_at_source_path("git rev-parse %s HEAD" % short_arg, output)
 	if os_err != OK:
 		return ""
-	return output[0].trim_suffix("\n")
+	var commit := output[0].trim_suffix("\n")
+	GitSubmodulePlugin.set_submodule_setting(repo, "commit", commit)
+	return commit
 
-func branch_name() -> String:
+func branch_name(use_cached := true) -> String:
+	if use_cached and GitSubmodulePlugin.has_submodule_setting(repo, "branch"):
+		return GitSubmodulePlugin.get_submodule_setting(repo, "branch")
 	var output : Array[String] = []
 	var err := _execute_at_source_path("git symbolic-ref --short HEAD", output)
 	if err != OK:
 		return ""
-	return output[0].trim_suffix("\n")
+	var branch := output[0].trim_suffix("\n")
+	GitSubmodulePlugin.set_submodule_setting(repo, "branch", branch)
+	return branch
 
-func has_changes() -> bool:
+func has_changes(use_cached := true) -> bool:
+	if use_cached and GitSubmodulePlugin.has_submodule_setting(repo, "changes"):
+		return GitSubmodulePlugin.get_submodule_setting(repo, "changes")
 	var output: Array[String] = []
 	var os_err := _execute_at_source_path("git status --porcelain", output)
 	if os_err == OK and output.size() > 0:
-		return output[0].length() > 0
+		var changes := output[0].length() > 0
+		GitSubmodulePlugin.set_submodule_setting(repo, "changes", changes)
+		return changes
 	return true
 
 func is_tracked() -> bool:
@@ -204,7 +242,7 @@ static func clone(
 	commit: String = "",
 	output: Array[String] = []
 ) -> Error:
-	print("Cloning %s" % p_repo, " from %s" % upstream_url)
+	l.debug("Cloning %s" % p_repo, " from %s" % upstream_url)
 	var err : Error
 	var os_err : int
 	err = _make_dir(p_repo)
@@ -218,15 +256,13 @@ static func clone(
 			upstream_url,
 			# commit
 		]
-	print(git_cmd)
 	os_err = _execute_at(source_folder, git_cmd, output)
 	if os_err != OK:
 		push_error(output)
 		return FAILED
-	print("Cloned %s" % p_repo)
+	l.debug("Cloned %s" % p_repo)
 	return err
 
-# TODO test
 func init(output : Array[String] = []) -> int:
 	var err : int
 	var dir := DirAccess.open(submodules_folder)
@@ -277,15 +313,21 @@ func init(output : Array[String] = []) -> int:
 		push_error("Created repo but was unable to install created plugin.")
 	return err
 
-# TODO some kind of OS cmd helper
 static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
-	# print_debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
-	return OS.execute(
+	var os_cmd := 'cd \"%s\" && %s' % [path, cmd]
+	l.debug("Executing " + os_cmd, l)
+	var sw := DebugProfiler.Stopwatch.new()
+	var err := OS.execute(
 		"$SHELL",
-		["-lc", 'cd \"%s\" && %s' % [path, cmd]],
+		["-lc", os_cmd],
 		output,
 		true)
+	sw.restart_and_log("execute '%s'" % cmd, p.debug)
+	return err
+
+static func github_upstream_url(p_repo: String) -> String:
+	return "git@github.com:%s.git" % p_repo
 
 var PLUGIN_CFG_CONTENTS := """\
 [plugin]

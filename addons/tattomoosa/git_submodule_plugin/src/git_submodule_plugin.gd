@@ -6,66 +6,139 @@ extends RefCounted
 const Self := preload("./git_submodule_plugin.gd")
 const GitSubmoduleAccess := preload("./access/git_submodule_access.gd")
 const TrackedEditorPluginAccess := preload("./access/tracked_editor_plugin_access.gd")
+const DebugProfiler := preload("./util/profiler.gd")
 
-const SUBMODULES_ROOT_SETTINGS_PATH := "git_submodule_plugin/paths/submodules_root"
+const L := preload("./util/logger.gd")
+static var l: L.Logger:
+	get: return L.get_logger(L.LogLevel.INFO, &"GitSubmodulePlugin")
+static var p: L.Logger:
+	get: return L.get_logger(L.LogLevel.WARN, "Profiler:GitSubmodulePlugin")
+
+const PRINT_DEBUG_MESSAGES := true
+const DEBUG_CLASS_NAME := "GitSubmodulePlugin"
 const SUBMODULES_DEFAULT_ROOT := "res://.submodules"
-
-
-static func _static_init():
-	pass
+const SETTINGS_PATH_SUBMODULES_ROOT := "git_submodules/settings/paths/submodule_folder"
+const SETTINGS_PATH_SUBMODULES_CONFIG_FILE := "git_submodules/settings/paths/submodules_config"
 
 static var submodules_root := SUBMODULES_DEFAULT_ROOT:
 	get:
 		if _is_moving_submodule_dir:
 			return _last_known_submodules_root
-		if !ProjectSettings.has_setting(SUBMODULES_ROOT_SETTINGS_PATH):
-			ProjectSettings.set_setting(SUBMODULES_ROOT_SETTINGS_PATH, SUBMODULES_DEFAULT_ROOT)
-		var path : String = ProjectSettings.get_setting(SUBMODULES_ROOT_SETTINGS_PATH)
+		if !ProjectSettings.has_setting(SETTINGS_PATH_SUBMODULES_ROOT):
+			ProjectSettings.set_setting(SETTINGS_PATH_SUBMODULES_ROOT, SUBMODULES_DEFAULT_ROOT)
+		var path : String = ProjectSettings.get_setting(SETTINGS_PATH_SUBMODULES_ROOT)
 		if path != _last_known_submodules_root:
-			print("Submodule root changed - last known: %s, current: %s" % [_last_known_submodules_root, path])
+			l.print("Submodule root changed - last known: %s, current: %s" % [_last_known_submodules_root, path])
 			var err := _move_submodules_dir(_last_known_submodules_root, path)
 			if err:
 				return _last_known_submodules_root
 		return path
 
-static var _last_known_submodules_root : String = ProjectSettings.get_setting(SUBMODULES_ROOT_SETTINGS_PATH)
+static var _last_known_submodules_root : String = ProjectSettings.get_setting(SETTINGS_PATH_SUBMODULES_ROOT)
 static var _is_moving_submodule_dir := false
+static var _config : ConfigFile
+static var submodules : Array[GitSubmoduleAccess] = []
 
+# TODO have a cmd helper
 static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
-	# print_debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
-	return OS.execute(
+	l.debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
+	var sw := DebugProfiler.Stopwatch.new()
+	var err := OS.execute(
 		"$SHELL",
 		["-lc", 'cd \"%s\" && %s' % [path, cmd]],
 		output,
 		true
 	)
+	sw.restart_and_log("execute '%s' at %s" % [cmd, path], p.debug)
+	return err
 
 static func get_tracked_plugins() -> Array[TrackedEditorPluginAccess]:
 	var plugins : Array[TrackedEditorPluginAccess]
-	for sm in get_tracked_submodules():
+	# for sm in get_tracked_submodules():
+	for sm in submodules:
 		plugins.append_array(sm.plugins)
 	return plugins
 
-static var submodules : Array[GitSubmoduleAccess] = []
+static func _get_submodule_settings() -> ConfigFile:
+	if _config:
+		return _config
+	var file_location : String = ProjectSettings.get_setting(SETTINGS_PATH_SUBMODULES_CONFIG_FILE)
+	_config = ConfigFile.new()
+	var err := _config.load(file_location)
+	if err == ERR_DOES_NOT_EXIST:
+		_save_settings()
+	elif err != OK:
+		push_error("Could not load submodules setting file, error: %s. Is setting a valid file path? %s : %s" % [
+			error_string(err),
+			SETTINGS_PATH_SUBMODULES_CONFIG_FILE,
+			file_location
+		])
+	return _config
+
+static func _save_settings() -> void:
+	if !_config:
+		_config = _get_submodule_settings()
+	var file_location : String = ProjectSettings.get_setting(SETTINGS_PATH_SUBMODULES_CONFIG_FILE)
+	var err := _config.save(file_location)
+	if err != OK:
+		push_error("Could not save submodules setting file. Is setting a valid file path? %s : %s" % [
+			SETTINGS_PATH_SUBMODULES_CONFIG_FILE,
+			file_location
+		])
+
+static func set_submodule_setting(repo: String, setting_name: String, setting_value: Variant) -> void:
+	if !_config:
+		_config = _get_submodule_settings()
+	_config.set_value(repo, setting_name, setting_value)
+	_save_settings()
+
+static func get_submodule_setting(repo: String, setting_name: String, default: Variant = null) -> Variant:
+	if !_config:
+		_config = _get_submodule_settings()
+	return _config.get_value(repo, setting_name, default)
+
+static func has_submodule_setting(repo: String, setting_name: String) -> bool:
+	if !_config:
+		_config = _get_submodule_settings()
+	return _config.has_section_key(repo, setting_name)
 
 static func get_tracked_submodules() -> Array[GitSubmoduleAccess]:
+	var stopwatch := DebugProfiler.Stopwatch.new()
 	var repos := _get_tracked_repos(get_submodules_root_path())
+	stopwatch.restart_and_log("get tracked repos", p.debug)
 	var sm_names := submodules.map(func(x: GitSubmoduleAccess) -> String: return x.repo)
+	stopwatch.restart_and_log("get repos from loaded submodules", p.debug)
 	# clear removed
 	for sm in submodules:
 		if sm.repo not in repos:
 			submodules.erase(sm)
+	stopwatch.restart_and_log("erase invalidated submodules", p.debug)
 	# populate new
+	var added_count : int = 0
+	var sw := DebugProfiler.Stopwatch.new()
 	for repo in repos:
-		if !repo in sm_names:
-			submodules.push_back(GitSubmoduleAccess.new(repo))
+		if repo in sm_names:
+			continue
+		submodules.push_back(GitSubmoduleAccess.new(repo))
+		sw.restart_and_log("load submodule %s" % repo, p.debug)
+		added_count += 1
+	stopwatch.restart_and_log("load %s submodules" % added_count, p.info)
 	return submodules.duplicate()
 
 static func reset_internal_state() -> void:
+	var stopwatch := DebugProfiler.Stopwatch.new()
 	submodules.clear()
-	@warning_ignore("return_value_discarded")
-	get_tracked_submodules()
+	# l.debug("Took %sms to clear tracked submodules" % stopwatch.restart())
+	stopwatch.restart_and_log("clear tracked submodules", p.info)
+	# @warning_ignore("return_value_discarded")
+	var _results := get_tracked_submodules()
+	l.print("Took %.2f ms to load %s plugins in %s submodules" % [
+		stopwatch.check() / 1000.0,
+		get_tracked_plugins().size(),
+		submodules.size()
+	])
+	stopwatch.restart_and_log("reload tracked submodules", p.info)
 
 static func _get_tracked_repos(path: String) -> Array[String]:
 	var dir := DirAccess.open(path)
@@ -74,7 +147,6 @@ static func _get_tracked_repos(path: String) -> Array[String]:
 		return [
 			dir.get_current_dir()\
 					.replace(get_submodules_root_path(), "")\
-					# .trim_suffix("/")
 					.trim_prefix("/")
 		]
 	var git_dirs : Array[String] = []
@@ -94,7 +166,7 @@ static func _get_or_create_submodules_dir() -> DirAccess:
 	var submodules_path := get_submodules_root_path()
 	var dir := DirAccess.open(submodules_path)
 	if !dir:
-		print("Creating submodules root path'%s'" % submodules_path)
+		l.print("Creating submodules root path'%s'" % submodules_path)
 		var err := DirAccess.make_dir_absolute(submodules_path)
 		assert(err == OK)
 		var file := FileAccess.open(submodules_path.path_join(".gdignore"), FileAccess.WRITE)

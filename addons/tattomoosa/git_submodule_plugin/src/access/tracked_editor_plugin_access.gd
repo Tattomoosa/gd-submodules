@@ -14,7 +14,6 @@ var ignorer : GitIgnorer
 const ADDONS_FOLDER_PATH := "res://addons/"
 
 func _init(
-	# p_name: String,
 	p_source_path: String,
 	p_ignorer: GitIgnorer = null
 ) -> void:
@@ -99,7 +98,13 @@ func install(force := false) -> Error:
 	if err != OK:
 		push_error("Could not create symlink: %s %s - " % [name, source_path], error_string(err))
 		return FAILED
-	print("Installed %s via symlink to %s" % [name, source_path])
+	#
+	var version_string : String = get_config_file().get_value("plugin", "version", "")
+	if version_string != "":
+		version_string = "v%s " % version_string
+
+	# print("Installed %s %svia symlink to %s" % [name, version_string, source_path])
+	print("Installed %s %svia symlink" % [name, version_string])
 	return err
 
 func get_config_file() -> ConfigFile:
