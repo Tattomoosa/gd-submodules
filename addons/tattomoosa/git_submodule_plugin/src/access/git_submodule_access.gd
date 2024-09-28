@@ -214,7 +214,8 @@ func has_changes(use_cached := true) -> bool:
 	return true
 
 func is_tracked() -> bool:
-	return DirAccess.dir_exists_absolute(source_path.path_join(".git"))
+	return FileAccess.file_exists(source_path.path_join(".git"))\
+		or DirAccess.dir_exists_absolute(source_path.path_join(".git"))
 
 func has_plugin_installed() -> bool:
 	return get_installed_plugins().size() > 0
@@ -259,7 +260,7 @@ static func add_submodule(
 	var shallow_text := "--depth=1" if shallow else ""
 	# var bare_text := "--bare" if bare else ""
 	var source_folder := submodules_folder.path_join(p_repo)
-	var author_folder := submodules_folder.path_join(author_name)
+	# var author_folder := submodules_folder.path_join(author_name)
 	var git_cmd := "git submodule add %s %s %s %s" % [
 			shallow_text,
 			# bare_text,

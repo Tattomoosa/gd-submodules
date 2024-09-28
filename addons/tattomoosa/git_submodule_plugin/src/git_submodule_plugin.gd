@@ -143,7 +143,7 @@ static func reset_internal_state() -> void:
 static func _get_tracked_repos(path: String) -> Array[String]:
 	var dir := DirAccess.open(path)
 	dir.include_hidden = true
-	if ".git" in dir.get_directories():
+	if ".git" in dir.get_directories() or ".git" in dir.get_files():
 		return [
 			dir.get_current_dir()\
 					.replace(get_submodules_root_path(), "")\
