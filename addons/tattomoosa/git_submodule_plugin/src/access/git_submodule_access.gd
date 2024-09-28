@@ -258,21 +258,15 @@ static func clone(
 	var shallow_text := "--depth=1" if shallow else ""
 	# var bare_text := "--bare" if bare else ""
 	var source_folder := submodules_folder.path_join(p_repo)
-	var git_cmd := "git clone %s %s %s %s ." % [
+	var git_cmd := "git submodule add %s %s %s %s" % [
 			shallow_text,
 			# bare_text,
 			branch,
 			upstream_url,
+			ProjectSettings.globalize_path(source_folder)
 			# commit
 		]
 	os_err = _execute_at(source_folder, git_cmd, output)
-	if os_err != OK:
-		push_error(output)
-		return FAILED
-	l.info("Cloned %s" % p_repo)
-	# Add submodule
-	git_cmd = "git submodule add %s" % ProjectSettings.globalize_path(source_folder) 
-	os_err = _execute_at("res://", git_cmd, output)
 	if os_err != OK:
 		push_error(output)
 		return FAILED

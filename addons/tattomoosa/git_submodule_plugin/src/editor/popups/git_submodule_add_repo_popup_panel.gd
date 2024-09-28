@@ -60,17 +60,20 @@ func _on_edit_changed() -> void:
 
 	# Uhhh I guess you can't do a specific commit on clone?
 	# TODO Should do a clone and checkout for that case?
-	var commit_text := commit_edit.text
+	# var commit_text := commit_edit.text
 
 	output.clear()
 	output.print(color_tag,
-			"git clone ",
-			branch_text,
-			bare_text,
-			shallow_text,
-			(get_origin_string() % ("[/color]" + repo_text + color_tag)),
-			"[/color] ",
-			commit_text)
+		"git submodule add ",
+		# bare_text,
+		shallow_text,
+		branch_text,
+		(get_origin_string() % ("[/color]" + repo_text + color_tag)),
+		" ",
+		GitSubmodulePlugin.submodules_root.path_join(repo_text),
+		"[/color] ",
+		# commit_text
+	)
 
 func reset() -> void:
 	repo_edit.clear()
