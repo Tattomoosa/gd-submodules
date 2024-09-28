@@ -235,11 +235,11 @@ func has_plugin_enabled() -> bool:
 func has_all_plugins_enabled() -> bool:
 	return get_enabled_plugins().size() == plugins.size()
 
-static func clone(
+static func add_submodule(
 	p_repo: String,
 	upstream_url: String = github_upstream_url(p_repo),
 	branch : String = "",
-	# TODO would need to checkout after clone to go straight
+	# TODO would need to checkout after add_submodule to go straight
 	# to specific commit
 	_commit: String = "",
 	shallow: bool = false,
@@ -250,7 +250,8 @@ static func clone(
 	l.info("Cloning %s" % p_repo, " from %s" % upstream_url)
 	var err : Error
 	var os_err : int
-	err = _make_dir(p_repo)
+	var author_name := p_repo.get_slice("/", 0)
+	err = _make_dir(author_name)
 	if !(err == OK or err == ERR_ALREADY_EXISTS):
 		return err
 	if !branch.is_empty():
@@ -258,6 +259,7 @@ static func clone(
 	var shallow_text := "--depth=1" if shallow else ""
 	# var bare_text := "--bare" if bare else ""
 	var source_folder := submodules_folder.path_join(p_repo)
+	var author_folder := submodules_folder.path_join(author_name)
 	var git_cmd := "git submodule add %s %s %s %s" % [
 			shallow_text,
 			# bare_text,
@@ -266,8 +268,9 @@ static func clone(
 			ProjectSettings.globalize_path(source_folder)
 			# commit
 		]
-	os_err = _execute_at(source_folder, git_cmd, output)
+	os_err = _execute_at("res://", git_cmd, output)
 	if os_err != OK:
+		# TODO cleanup files
 		push_error(output)
 		return FAILED
 	l.info("Added submodule %s" % p_repo)

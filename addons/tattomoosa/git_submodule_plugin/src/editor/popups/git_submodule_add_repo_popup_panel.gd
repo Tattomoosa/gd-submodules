@@ -102,13 +102,13 @@ func add_repo() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var out : Array[String] = []
-	var err := GitSubmoduleAccess.clone(
+	var err := GitSubmoduleAccess.add_submodule(
 		repo,
 		upstream_url,
-		branch,
+		branch, # TODO unused, remove or support via checkout
 		commit,
 		shallow,
-		bare,
+		bare, # TODO unused, remove
 		out,
 	)
 	# if err != OK:
@@ -119,7 +119,8 @@ func add_repo() -> void:
 			"[color=red]",
 			"Error encountered during git clone: %s\n" % error_string(err),
 			"Git Output:\n",
-			"\n".join(out),
+			# "\n".join(out),
+			out[0],
 			"[/color]",
 		)
 		return
