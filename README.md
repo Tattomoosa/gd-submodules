@@ -1,15 +1,15 @@
 <div align="center">
 	<br/>
 	<br/>
-	<img src="addons/tattomoosa.vision_cone_3d/icons/VisionCone3D.svg" width="100"/>
+	<img src="addons/tattomoosa/git_submodule_plugin/icons/GitPlugin.svg" width="100"/>
 	<br/>
 	<h1>
-		VisionCone3D
+		Godot Submodules
 		<br/>
 		<sub>
 		<sub>
 		<sub>
-		Simple but configurable 3D vision cone node for <a href="https://godotengine.org/">Godot</a>
+		Dead simple git submodule plugin management, for <a href="https://godotengine.org/">Godot</a>
 		</sub>
 		</sub>
 		</sub>
@@ -19,106 +19,61 @@
 	</h1>
 	<br/>
 	<br/>
-	<img src="./readme_images/demo.png" height="140">
+	<!-- <img src="./readme_images/demo.png" height="140">
 	<img src="./readme_images/stress_test.png" height="140">
-	<img src="./readme_images/editor_view.png" height="140">
+	<img src="./readme_images/editor_view.png" height="140"> -->
 	<br/>
 	<br/>
 </div>
 
-Adds VisionCone3D, which tracks whether or not objects within its cone shape can be "seen".
-This can be used to let objects in your game "see" multiple objects efficiently.
-Default configuration should work for most use-cases out of the box.
+Dead simple git submodule plugin management, for Godot
+
+> This plugin works but is in pre-release as it has not been tested for many configurations of Windows yet. Issues and pull requests appreciated!
 
 ## Features
 
-* Edit range/angle of cone via 3D viewport editor gizmo
-* Debug visualization to easily diagnose any issues
-* Works with complex objects that have many collision shapes
-* Configurable vision probe settings allow tuning effectiveness and performance to your use-case
-* Ignore some physics bodies (eg the parent body)
-* Separate masks for bodies that can be seen and bodies that can only occlude other objects
-* Includes general-purpose ConeShape3D
+* Add submodule plugins from remote repos
+* Installs only files available via `git archive` by default
+	* So most packages available on Godot's Asset Lib *just work*
+	* No need to specify plugin root, even for packages with multiple plugins
+* Code changes are reflected in submodule's git status (installs via symlink)
+	* Seamlessly work on your own plugins inside your main project
+	* PR code changes to a plugin without needing to clone separately
+	* Open plugin projects (to view examples etc) seamlessly from the file dock
+
+## Limitations
+
+Cannot be used to install GDExtensions. Since those require a build-step they cannot
+be installed via submodule.
 
 ## Installation
 
-Install via the AssetLib tab within Godot by searching for VisionCone3D
+### Requirements
+
+Git must be installed and in your `$PATH`
+
+### Self-managed installation (recommended)
+
+
+
+```
+git submodule add git@github.com:tattomoosa/godot_submodule_plugins.git .submodules/tattomoosa/godot_submodule_plugins
+ln -s .submodules/tattomoosa/godot_submodule_plugins addons/godot_submodule_plugins
+echo ".submodules/" > .gitignore
+```
+
+Then activate the plugin via the Plugins tab in Project Settings...
+
+TODO image
+
+And it will find itself.
 
 ## Usage
 
-Add the VisionCone3D node to your scene. Turn on debug draw to see it working. Then you can...
-
-### Connect to the body visible signals
-
-These signals fire when a body is newly visible or newly hidden.
-
-```python
-func _ready():
-	vision_cone.body_sighted.connect(_on_body_sighted)
-	vision_cone.body_hidden.connect(_on_body_hidden)
-
-func _on_body_sighted(body: Node3D):
-	print("body sighted: ", body.name)
-
-func _on_body_hidden(body: Node3D):
-	print("body hidden: ", body.name)
-```
-
-### Poll the currently visible bodies
-
-```python
-func _process(): # doesn't need to be during a physics frame
-	print("bodies visible: ", vision_cone.get_visible_bodies())
-```
-
-## Performance Tuning
-
-### Vision Test Mode
-
-#### Center
-
-Samples only the center point (position) of the CollisionShape. Most efficient, but least effective
-as if the center of a shape is obscured it won't be seen.
-
-```python
-vision_cone.vision_test_mode = VisionCone3D.VisionTestMode.SAMPLE_CENTER
-```
-
-#### Sample Random Vertices
-
-Uses CollisionShape's `get_debug_mesh` to get a mesh representation of the CollisionShape,
-then samples random vertex points from that mesh.
-Effectiveness determined by the max body count and max probe per shape count
-
-```python
-vision_cone.vision_test_mode = VisionCone3D.VisionTestMode.SAMPLE_RANDOM_VERTICES
-vision_cone.vision_test_max_body_count = 50 # Bodies probed, per-frame
-vision_cone.vision_test_shape_max_probe_count = 5 # Probes per hidden shape
-```
-
-### Collision Masks
-
-VisionCone3D has 2 collision masks, one used for bodies that can be seen by the cone and one for an environment,
-which can occlude seen bodies but is not itself probed for visibility.
-
-For example, add the level collision layer to `collision_environment_mask` and the player/enemy/object collision layer to the `collision_mask`.
-The player/enemy/object can then hide behind the level, but no processing/probing will occur on the level collision geometry itself.
+Open the new settings pane in Project Settings
 
 ## The Future
 
-This asset is still in development. I have some ideas for further performance tuning options, and I'm open to feedback on the usability and how to improve documentation or workflows.
-
-### 2D Support?
-
-I am open to adding a 2D version of this addon if there is sufficient interest.
-
-See if [VisionCone2D](https://github.com/d-bucur/godot-vision-cone) meets your needs in the meantime. No relation.
-
-## Upgrading
-
-### 0.1.0 -> 0.2.0
-
-v0.2.0 has significant performance improvements. Probably should have waited a few days before publishing. It probably doesn't have any users yet, but just in case...
-
-* Use "Change Type..." on your VisionCone3Ds and select Area3D.
-* Use new ConeShape3D for all your cone-y collision needs
+* Support more installation options
+* Seamlessly support releases + source code installations?
+	* W

@@ -40,6 +40,7 @@ enum RepoColumnButtonIndex {
 }
 enum EditColumnButtonIndex {
 	EDIT_REPO,
+	EDIT_IN_GODOT,
 	TERMINAL
 }
 
@@ -181,6 +182,11 @@ func _button_clicked(item: TreeItem, col: int, id: int, mouse_button_index: int)
 				match id:
 					EditColumnButtonIndex.EDIT_REPO:
 						edit_submodule.emit(sm)
+					EditColumnButtonIndex.EDIT_IN_GODOT:
+						# var exe_path := OS.get_executable_path()
+						var os_err := OS.create_instance(["-e", "--path", ProjectSettings.globalize_path(sm.source_path)])
+						if os_err == -1:
+							push_error("Failed to create godot instance")
 					EditColumnButtonIndex.TERMINAL:
 						var editor_settings := EditorInterface.get_editor_settings()
 						var terminal : String = editor_settings.get_setting("filesystem/external_programs/terminal_emulator")
@@ -343,9 +349,12 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 	item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_LEFT)
 	item.set_text(c, "")
 	item.set_cell_mode(c, TreeItem.CELL_MODE_ICON)
+	# buttons
 	item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"), EditColumnButtonIndex.EDIT_REPO)
+	item.add_button(Column.EDIT, get_theme_icon("GodotMonochrome", "EditorIcons"), EditColumnButtonIndex.EDIT_IN_GODOT)
 	item.add_button(Column.EDIT, get_theme_icon("Terminal", "EditorIcons"), EditColumnButtonIndex.TERMINAL)
 	item.set_button_tooltip_text(Column.EDIT, EditColumnButtonIndex.EDIT_REPO, "Open submodule edit window")
+	item.set_button_tooltip_text(Column.EDIT, EditColumnButtonIndex.EDIT_IN_GODOT, "Open plugin project in new Godot editor")
 	item.set_button_tooltip_text(Column.EDIT, EditColumnButtonIndex.TERMINAL, "Open terminal at submodule source root")
 
 	var config_texts : PackedStringArray = []
