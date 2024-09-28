@@ -148,16 +148,17 @@ func remove() -> Error:
 	assert(err == OK)
 	var relative_folder := _get_source_folder_relative_to_project_root()
 	var output : Array[String] = []
-	var os_err := _execute_at("res://", "git rm -f %s" % relative_folder, output)
+	var os_err := _execute_at("res://", "git rm -rf %s" % relative_folder, output)
 	if os_err != OK:
 		push_error(output)
 		return FAILED
-	l.print(output)
+	print(output)
 	os_err = _execute_at(dir.get_current_dir(), "git config --remove-section submodule.%s" % relative_folder, output)
 	if os_err != OK:
 		push_error(output)
 		return FAILED
-	l.print(output)
+	print(output)
+	print(os_err)
 	err = _dir_cleanup(submodules_folder.path_join(author))
 	if os_err == OK:
 		return OK
