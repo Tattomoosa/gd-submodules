@@ -99,7 +99,7 @@ func build() -> void:
 
 func _confirmation_dialog_cancel() -> void:
 	_currently_deleting = null
-	reset()
+	# reset()
 
 func _confirmation_dialog_confirm() -> void:
 	l.debug("Removing %s..." % _currently_deleting.repo)
