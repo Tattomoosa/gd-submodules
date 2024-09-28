@@ -1,0 +1,3 @@
+[submodule ".submodules/kenyoni-software/godot-addons"]
+	path = .submodules/kenyoni-software/godot-addons
+	url = git@github.com:kenyoni-software/godot-addons.git
