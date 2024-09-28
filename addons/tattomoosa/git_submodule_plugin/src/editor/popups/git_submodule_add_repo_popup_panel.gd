@@ -70,7 +70,7 @@ func _on_edit_changed() -> void:
 		branch_text,
 		(get_origin_string() % ("[/color]" + repo_text + color_tag)),
 		" ",
-		GitSubmodulePlugin.submodules_root.path_join(repo_text),
+		GitSubmodulePlugin.submodules_root.path_join(repo_text).replace("res://", "./"),
 		"[/color] ",
 		# commit_text
 	)
