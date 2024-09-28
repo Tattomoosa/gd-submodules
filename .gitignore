@@ -20,3 +20,4 @@ addons/**
 !addons/tattomoosa/git_submodule_plugin/**
 submodules/**
 .submodules/**
+.DS_Store

@@ -12,11 +12,6 @@ config_version=5
 
 config/features=PackedStringArray("4.3")
 
-[autoload]
-
-BeehaveGlobalMetrics="*res://addons/beehave/metrics/beehave_global_metrics.gd"
-BeehaveGlobalDebugger="*res://addons/beehave/debug/global_debugger.gd"
-
 [debug]
 
 gdscript/warnings/exclude_addons=false
@@ -24,6 +19,11 @@ gdscript/warnings/untyped_declaration=1
 gdscript/warnings/unsafe_property_access=1
 gdscript/warnings/unsafe_method_access=1
 gdscript/warnings/return_value_discarded=1
+
+[editor]
+
+version_control/plugin_name="GitPlugin"
+version_control/autoload_on_startup=true
 
 [editor_plugins]
 

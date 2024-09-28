@@ -239,8 +239,12 @@ static func clone(
 	p_repo: String,
 	upstream_url: String = github_upstream_url(p_repo),
 	branch : String = "",
-	commit: String = "",
+	# TODO would need to checkout after clone to go straight
+	# to specific commit
+	_commit: String = "",
 	shallow: bool = false,
+	# TODO i guess submodules can't be bare?
+	_bare: bool = false,
 	output: Array[String] = []
 ) -> Error:
 	l.info("Cloning %s" % p_repo, " from %s" % upstream_url)
@@ -252,11 +256,13 @@ static func clone(
 	if !branch.is_empty():
 		branch = "-b " + branch
 	var shallow_text := "--depth=1" if shallow else ""
+	# var bare_text := "--bare" if bare else ""
 	var source_folder := submodules_folder.path_join(p_repo)
-	var git_cmd := "git clone %s %s %s ." % [
+	var git_cmd := "git clone %s %s %s %s ." % [
+			shallow_text,
+			# bare_text,
 			branch,
 			upstream_url,
-			shallow_text
 			# commit
 		]
 	os_err = _execute_at(source_folder, git_cmd, output)
@@ -264,6 +270,13 @@ static func clone(
 		push_error(output)
 		return FAILED
 	l.info("Cloned %s" % p_repo)
+	# Add submodule
+	git_cmd = "git submodule add %s" % ProjectSettings.globalize_path(source_folder) 
+	os_err = _execute_at("res://", git_cmd, output)
+	if os_err != OK:
+		push_error(output)
+		return FAILED
+	l.info("Added submodule %s" % p_repo)
 	return err
 
 func checkout(

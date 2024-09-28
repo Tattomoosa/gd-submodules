@@ -28,6 +28,7 @@ var origin_urls := {
 @onready var custom_origin_edit : LineEdit = %CustomOriginEdit
 @onready var shallow_option : CheckBox = %ShallowOption
 @onready var output : StatusOutput = %StatusOutput
+@onready var bare_option: CheckBox = %BareOption
 
 @warning_ignore("return_value_discarded")
 func _ready() -> void:
@@ -37,6 +38,7 @@ func _ready() -> void:
 	branch_edit.text_changed.connect(_on_edit_changed.unbind(1))
 	commit_edit.text_changed.connect(_on_edit_changed.unbind(1))
 	shallow_option.pressed.connect(_on_edit_changed)
+	bare_option.pressed.connect(_on_edit_changed)
 	_on_edit_changed()
 
 func _on_edit_changed() -> void:
@@ -53,15 +55,18 @@ func _on_edit_changed() -> void:
 	
 	var shallow_text := "--depth=1 "\
 		if shallow_option.button_pressed else ""
+	var bare_text := "--bare "\
+		if bare_option.button_pressed else ""
 
 	# Uhhh I guess you can't do a specific commit on clone?
-	# Should probably do a clone and checkout for that...
+	# TODO Should do a clone and checkout for that case?
 	var commit_text := commit_edit.text
 
 	output.clear()
 	output.print(color_tag,
 			"git clone ",
 			branch_text,
+			bare_text,
 			shallow_text,
 			(get_origin_string() % ("[/color]" + repo_text + color_tag)),
 			"[/color] ",
@@ -81,6 +86,7 @@ func add_repo() -> void:
 	var branch := branch_edit.text
 	var commit := commit_edit.text
 	var shallow := shallow_option.button_pressed
+	var bare := bare_option.button_pressed
 	var origin_string := get_origin_string()
 	var upstream_url := (origin_string % repo)\
 		if "%s" in origin_string\
@@ -99,6 +105,7 @@ func add_repo() -> void:
 		branch,
 		commit,
 		shallow,
+		bare,
 		out,
 	)
 	# if err != OK:

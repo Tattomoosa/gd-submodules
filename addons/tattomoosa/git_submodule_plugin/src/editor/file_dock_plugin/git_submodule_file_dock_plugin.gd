@@ -14,6 +14,7 @@ const FADE_COLOR := Color(1, 1, 1, 0.5)
 const UNINSTALLED_COLOR := Color(1, 1, 1, 0.2)
 
 const GIT_ICON := preload("../../../icons/Git.svg")
+const GIT_PLUGIN_ICON := preload("../../../icons/GitPlugin.svg")
 const REPO_CHANGES_ICON := preload("../../../icons/GitChanges.svg")
 
 const GitSubmodulePlugin := preload("../../git_submodule_plugin.gd")
@@ -29,8 +30,8 @@ var plugin_icon : Texture2D
 var git_icon : Texture2D
 var changes_icon : Texture2D
 
-func _ready() -> void:
-	plugin_icon = get_theme_icon("EditorPlugin", "EditorIcons")
+# func _ready() -> void:
+# 	plugin_icon = get_theme_icon("EditorPlugin", "EditorIcons")
 
 @warning_ignore("return_value_discarded")
 func initialize() -> void:
@@ -39,6 +40,7 @@ func initialize() -> void:
 	git_icon = _resize_icon(GIT_ICON.get_image())
 	# TODO placeholder, need better git status icons
 	changes_icon = REPO_CHANGES_ICON
+	plugin_icon = GIT_PLUGIN_ICON
 	EditorInterface.get_editor_main_screen().add_child(self)
 	file_tree = _find_file_tree()
 	if !file_tree:
