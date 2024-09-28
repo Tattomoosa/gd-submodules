@@ -142,7 +142,7 @@ func remove() -> Error:
 		return ERR_CANT_OPEN
 
 	dir.include_hidden = true
-	if ".git" not in dir.get_files() or ".git" not in dir.get_directories():
+	if ".git" not in dir.get_files() and ".git" not in dir.get_directories():
 		return ERR_FILE_BAD_PATH
 	var err := dir.change_dir(submodules_folder)
 	assert(err == OK)
@@ -152,14 +152,10 @@ func remove() -> Error:
 	if os_err != OK:
 		push_error(output)
 		return FAILED
-	push_error(output)
-	push_error(os_err)
-	os_err = _execute_at(dir.get_current_dir(), "git config --remove-section submodule.%s" % relative_folder, output)
+	os_err = _execute_at(dir.get_current_dir(), "git config --remove-section submodule.%s" % relative_folder.trim_prefix("./"), output)
 	if os_err != OK:
 		push_error(output)
 		return FAILED
-	push_error(output)
-	push_error(os_err)
 	err = _dir_cleanup(submodules_folder.path_join(author))
 	if os_err == OK:
 		return OK
