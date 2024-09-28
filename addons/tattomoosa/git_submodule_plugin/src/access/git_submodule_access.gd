@@ -152,7 +152,12 @@ func remove() -> Error:
 	if os_err != OK:
 		push_error(output)
 		return FAILED
+	l.print(output)
 	os_err = _execute_at(dir.get_current_dir(), "git config --remove-section submodule.%s" % relative_folder, output)
+	if os_err != OK:
+		push_error(output)
+		return FAILED
+	l.print(output)
 	err = _dir_cleanup(submodules_folder.path_join(author))
 	if os_err == OK:
 		return OK
