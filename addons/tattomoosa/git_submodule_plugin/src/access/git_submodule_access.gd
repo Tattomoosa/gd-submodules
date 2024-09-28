@@ -26,7 +26,7 @@ var repo_name : String:
 func _init(p_repo: String) -> void:
 	repo = p_repo
 	source_path = submodules_folder.path_join(repo)
-	var sw := DebugProfiler.Stopwatch.new()
+	# var sw := DebugProfiler.Stopwatch.new()
 	plugins = _get_plugins()
 	# sw.restart_and_log(
 	# 	"load submodule plugins: %s" % plugins\
@@ -146,14 +146,28 @@ func remove() -> Error:
 		return ERR_FILE_BAD_PATH
 	var err := dir.change_dir(submodules_folder)
 	assert(err == OK)
+	var relative_folder := _get_source_folder_relative_to_project_root()
 	var output : Array[String] = []
-	var os_err := _execute_at(dir.get_current_dir(), "git rm -f %s" % repo, output)
+	var os_err := _execute_at("res://", "git rm -f %s" % relative_folder, output)
 	if os_err != OK:
 		push_error(output)
+		return FAILED
+	os_err = _execute_at(dir.get_current_dir(), "git config --remove-section submodule.%s" % relative_folder, output)
 	err = _dir_cleanup(submodules_folder.path_join(author))
 	if os_err == OK:
 		return OK
 	return FAILED
+
+func _get_source_folder_relative_to_project_root() -> String:
+	return _get_source_folder_relative_to_project_root_static(repo)
+
+static func _get_source_folder_relative_to_project_root_static(p_repo: String) -> String:
+	var path := GitSubmodulePlugin.submodules_root.path_join(p_repo)
+	if path.begins_with("res://"):
+		return path.replace("res://", "./")
+	else:
+		push_warning("Submodules root stored outside of project resource directory may cause issues on other machines!")
+		return ProjectSettings.globalize_path(path)
 
 func _execute_at_source_path(cmd: String, output: Array[String] = []) -> int:
 	var err := _execute_at(source_path, cmd, output)
@@ -262,14 +276,15 @@ static func add_submodule(
 		branch = "-b " + branch
 	var shallow_text := "--depth=1" if shallow else ""
 	# var bare_text := "--bare" if bare else ""
-	var source_folder := submodules_folder.path_join(p_repo)
+	# var source_folder := submodules_folder.path_join(p_repo)
+	var relative_root := _get_source_folder_relative_to_project_root_static(p_repo)
 	# var author_folder := submodules_folder.path_join(author_name)
 	var git_cmd := "git submodule add %s %s %s %s" % [
 			shallow_text,
 			# bare_text,
 			branch,
 			upstream_url,
-			ProjectSettings.globalize_path(source_folder)
+			relative_root,
 			# commit
 		]
 	os_err = _execute_at("res://", git_cmd, output)
