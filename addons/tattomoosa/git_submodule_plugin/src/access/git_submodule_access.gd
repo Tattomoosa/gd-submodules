@@ -146,7 +146,10 @@ func remove() -> Error:
 		return ERR_FILE_BAD_PATH
 	var err := dir.change_dir(submodules_folder)
 	assert(err == OK)
-	var os_err := _execute_at(dir.get_current_dir(), "git rm %s" % repo)
+	var output : Array[String] = []
+	var os_err := _execute_at(dir.get_current_dir(), "git rm -f %s" % repo, output)
+	if os_err != OK:
+		push_error(output)
 	err = _dir_cleanup(submodules_folder.path_join(author))
 	if os_err == OK:
 		return OK
