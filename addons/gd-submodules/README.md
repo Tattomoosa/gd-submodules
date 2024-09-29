@@ -67,7 +67,7 @@ Git must be installed and in your `$PATH`. Your project must be a valid git repo
 From your project root, which must be a valid git repo (`git init`)
 
 ```bash
-mkdir ./.submodules ./addons
+mkdir -p ./.submodules ./addons
 touch .submodules/.gdignore
 git submodule add git@github.com:tattomoosa/gd-submodules.git ./.submodules/tattomoosa/gd-submodules
 cd addons && ln -s ../.submodules/tattomoosa/gd-submodules/addons/gd-submodules ./gd-submodules
