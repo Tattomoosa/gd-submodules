@@ -3,4 +3,5 @@
 # Addon store download only includes addons folder
 /**        export-ignore
 /addons    !export-ignore
-/addons/** !export-ignore
+/addons/gd-submodules !export-ignore
+/addons/gd-submodules/** !export-ignore

@@ -1,13 +1,13 @@
 [gd_scene load_steps=12 format=3 uid="uid://bvgtcedia500d"]
 
-[ext_resource type="Script" path="res://addons/tattomoosa/git_submodule_plugin/src/editor/theme_icon_button.gd" id="1_mx6dm"]
-[ext_resource type="Texture2D" uid="uid://bfqng353o28c8" path="res://addons/tattomoosa/git_submodule_plugin/icons/GitPlugin.svg" id="1_tb6n2"]
-[ext_resource type="Script" path="res://addons/tattomoosa/git_submodule_plugin/src/editor/git_submodule_tree.gd" id="2_ky04e"]
-[ext_resource type="Script" path="res://addons/tattomoosa/git_submodule_plugin/src/editor/git_submodule_project_settings/git_submodule_plugin_more_actions_menu.gd" id="2_s1ddx"]
-[ext_resource type="Script" path="res://addons/tattomoosa/git_submodule_plugin/src/editor/common_controls/loading_indicator.gd" id="3_8o1t1"]
-[ext_resource type="PackedScene" uid="uid://pegon4ube686" path="res://addons/tattomoosa/git_submodule_plugin/src/editor/popups/git_submodule_add_repo_popup_panel.tscn" id="4_33a7x"]
-[ext_resource type="PackedScene" uid="uid://ixlfxed7bmyi" path="res://addons/tattomoosa/git_submodule_plugin/src/editor/popups/git_submodule_new_repo_popup_panel.tscn" id="5_buwbv"]
-[ext_resource type="PackedScene" uid="uid://dxf7cih2l4btw" path="res://addons/tattomoosa/git_submodule_plugin/src/editor/popups/git_submodule_edit_repo_popup.tscn" id="7_pqfyb"]
+[ext_resource type="Script" path="res://addons/gd-submodules/src/editor/theme_icon_button.gd" id="1_mx6dm"]
+[ext_resource type="Texture2D" uid="uid://bfqng353o28c8" path="res://addons/gd-submodules/icons/GitPlugin.svg" id="1_tb6n2"]
+[ext_resource type="Script" path="res://addons/gd-submodules/src/editor/git_submodule_tree.gd" id="2_ky04e"]
+[ext_resource type="Script" path="res://addons/gd-submodules/src/editor/git_submodule_project_settings/git_submodule_plugin_more_actions_menu.gd" id="2_s1ddx"]
+[ext_resource type="Script" path="res://addons/gd-submodules/src/editor/common_controls/loading_indicator.gd" id="3_8o1t1"]
+[ext_resource type="PackedScene" uid="uid://pegon4ube686" path="res://addons/gd-submodules/src/editor/popups/git_submodule_add_repo_popup_panel.tscn" id="4_33a7x"]
+[ext_resource type="PackedScene" uid="uid://ixlfxed7bmyi" path="res://addons/gd-submodules/src/editor/popups/git_submodule_new_repo_popup_panel.tscn" id="5_buwbv"]
+[ext_resource type="PackedScene" uid="uid://dxf7cih2l4btw" path="res://addons/gd-submodules/src/editor/popups/git_submodule_edit_repo_popup.tscn" id="7_pqfyb"]
 
 [sub_resource type="Image" id="Image_ideyn"]
 data = {

@@ -2,16 +2,17 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cusccp0e8vhdt"
-path="res://.godot/imported/Terminal.svg-dba5975c8a295e9f9c10d3e44b9c69a5.ctex"
+uid="uid://crmut88v4dkx3"
+path="res://.godot/imported/GitChanges.svg-6ebb11f16bae0b270e571f52b02d32d3.ctex"
 metadata={
+"has_editor_variant": true,
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/tattomoosa/git_submodule_plugin/icons/Terminal.svg"
-dest_files=["res://.godot/imported/Terminal.svg-dba5975c8a295e9f9c10d3e44b9c69a5.ctex"]
+source_file="res://addons/gd-submodules/icons/GitChanges.svg"
+dest_files=["res://.godot/imported/GitChanges.svg-6ebb11f16bae0b270e571f52b02d32d3.ctex"]
 
 [params]
 
@@ -33,5 +34,5 @@ process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
 svg/scale=1.0
-editor/scale_with_editor_scale=false
-editor/convert_colors_with_editor_theme=false
+editor/scale_with_editor_scale=true
+editor/convert_colors_with_editor_theme=true
