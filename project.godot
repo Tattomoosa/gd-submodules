@@ -25,10 +25,6 @@ gdscript/warnings/return_value_discarded=1
 version_control/plugin_name="GitPlugin"
 version_control/autoload_on_startup=true
 
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/tattomoosa/git_submodule_plugin/plugin.cfg")
-
 [git_submodule_plugin]
 
 paths/submodules_root="res://.submodules"

@@ -4,12 +4,12 @@
 	<img src="addons/tattomoosa/git_submodule_plugin/icons/GitPlugin.svg" width="100"/>
 	<br/>
 	<h1>
-		Godot Submodules
+		Gd-Submodules
+		<br/>
 		<br/>
 		<sub>
 		<sub>
-		<sub>
-		Dead simple git submodule plugin management, for <a href="https://godotengine.org/">Godot</a>
+		Dead simple plugin management via git submodule, for <a href="https://godotengine.org/">Godot</a>
 		</sub>
 		</sub>
 		</sub>
@@ -19,54 +19,64 @@
 	</h1>
 	<br/>
 	<br/>
-	<!-- <img src="./readme_images/demo.png" height="140">
-	<img src="./readme_images/stress_test.png" height="140">
-	<img src="./readme_images/editor_view.png" height="140"> -->
+	<img src="./media/image.png" height="400">
+	<!-- <img src="./readme_images/stress_test.png" height="140"> -->
+	<!-- <img src="./readme_images/editor_view.png" height="140"> -->
 	<br/>
 	<br/>
 </div>
 
-Dead simple git submodule plugin management, for Godot
-
-> This plugin works but is in pre-release as it has not been tested for many configurations of Windows yet. Issues and pull requests appreciated!
+> This plugin is in pre-release as it has not been tested for many configurations of Windows yet. Issues / pull requests appreciated!
 
 ## Features
 
 * Add submodule plugins from remote repos
-* Installs only files available via `git archive` by default
-	* So most packages available on Godot's Asset Lib *just work*
+* Plugins [built to spec](https://docs.godotengine.org/en/stable/community/asset_library/submitting_to_assetlib.html) *just work*
+	* Installation only includes files available via `git archive`
 	* No need to specify plugin root, even for packages with multiple plugins
+	* Plugins within the plugin's source project which are not meant to be installed by the end user won't be
+	* This includes almost all plugins available on the Asset Library
+* Independent installation of plugins from repos with multiple plugins
 * Code changes are reflected in submodule's git status (installs via symlink)
 	* Seamlessly work on your own plugins inside your main project
 	* PR code changes to a plugin without needing to clone separately
 	* Open plugin projects (to view examples etc) seamlessly from the file dock
+* Does not interference with plugins installed via other means
 
 ## Limitations
 
-Cannot be used to install GDExtensions. Since those require a build-step they cannot
-be installed via submodule.
+Plugins that are stored at their repo root (instead of within `./addons/`) are not currently supported. (Support planned)
+Plugins which use but don't properly ignore development dependencies in their archive will list those
+dependencies as available plugins. They can still be installed independently
+
+Cannot be used to install GDExtensions. Since those require a
+build-step they cannot be installed via submodule. (No support planned, out of scope)
 
 ## Installation
 
 ### Requirements
 
-Git must be installed and in your `$PATH`
+Git must be installed and in your `$PATH`. Your project must be a valid git repo.
+
+> This git repo *probably* has to have the same root as your project, but maybe not! (Testing needed)
 
 ### Self-managed bootstrap installation (recommended)
 
 From your project root, which must be a valid git repo (`git init`)
 
-```
-git submodule add git@github.com:tattomoosa/gdsm.git .submodules/tattomoosa/gdsm
-ln -s .submodules/tattomoosa/gdsm addons/gdsm
-echo ".submodules/" > .gitignore
+```bash
+touch .submodules/.gdignore
+git submodule add git@github.com:tattomoosa/gd-submodules.git ./.submodules/tattomoosa/gd-submodules
+ln -s ./.submodules/tattomoosa/gd-submodules ./addons/gd-submodules
+echo ".submodules/**" > .gitignore
+echo "!.submodules/submodules.cfg" > .gitignore
 ```
 
 Then activate the plugin via the Plugins tab in Project Settings...
 
 TODO image
 
-And it will find itself and can handle its own updates.
+And it will find itself and can handle its own updates from here!
 
 ### Via Asset Lib
 
@@ -82,19 +92,30 @@ Open the new settings pane in Project Settings
 
 ## The Future
 
+* Commandline usage
+	* Who doesn't love to be headless
+* More options available via GUI
+	* Git Pull for submodules is probably the big one lol
+* Bootstrap via Asset Lib
+	* This actually shouldn't be too bad
 * Support more installation options
 	* From plugin project root, ignoring only project.godot
 		* Needs to be configurable between addons/{rep_name} and a custom folder
 	* Bypass archive rules
-* Seamlessly support releases + source code installations?
+	* No symlink, true install
+* Support archive releases / GitExtension
+	* Probably out of scope
 	* Would not be fully submodule-backed, would make this more of an all-in-one Godot plugin manager
-		* This would be ok, but the name might need to change!
-* Calling out to git via the command line is slow
+		* This would be cool, but the name would need to change!
+* Faster calls to git?
 	* Does it matter?
-		* Generally, no. For immediate updates of git status, yes
+		* Generally, no. For immediate updates of git status and other nice-to-haves, yes.
 	* Possible solutions:
-		* Packaging a GDExtension, or allowing an optional dependency on one
+		* Packaging a GDExtension, or supporting an optional dependency on one
 			* `godot-git-plugin`, unfortunately, does not appear to allow general purpose git use
 		* Using threading and `OS.execute_with_pipe` to run commands
 			* Not sure if it's any faster, need to test that
-			* Asynchronous and doesn't risk locking up the editor, even if it's still slow
+			* Asynchronous and doesn't risk locking up the editor, even if it's still just as slow
+* Dependency Management?
+	* Wouldn't that be nice!
+		* End user dependency management is fairly easy
