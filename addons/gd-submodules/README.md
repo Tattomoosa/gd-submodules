@@ -67,9 +67,10 @@ Git must be installed and in your `$PATH`. Your project must be a valid git repo
 From your project root, which must be a valid git repo (`git init`)
 
 ```bash
+mkdir ./.submodules ./addons
 touch .submodules/.gdignore
 git submodule add git@github.com:tattomoosa/gd-submodules.git ./.submodules/tattomoosa/gd-submodules
-ln -s ./.submodules/tattomoosa/gd-submodules ./addons/gd-submodules
+cd addons && ln -s ../.submodules/tattomoosa/gd-submodules/addons/gd-submodules ./gd-submodules
 ```
 
 Then activate the plugin via the Plugins tab in Project Settings...

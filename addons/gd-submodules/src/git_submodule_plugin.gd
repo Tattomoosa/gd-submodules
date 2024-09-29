@@ -27,14 +27,14 @@ static var submodules_root := SUBMODULES_DEFAULT_ROOT:
 		if !ProjectSettings.has_setting(SETTINGS_PATH_SUBMODULES_ROOT):
 			ProjectSettings.set_setting(SETTINGS_PATH_SUBMODULES_ROOT, SUBMODULES_DEFAULT_ROOT)
 		var path : String = ProjectSettings.get_setting(SETTINGS_PATH_SUBMODULES_ROOT)
-		if path != _last_known_submodules_root:
+		if _last_known_submodules_root != "" and path != _last_known_submodules_root:
 			l.print("Submodule root changed - last known: %s, current: %s" % [_last_known_submodules_root, path])
 			var err := _move_submodules_dir(_last_known_submodules_root, path)
 			if err:
 				return _last_known_submodules_root
 		return path
 
-static var _last_known_submodules_root : String = ProjectSettings.get_setting(SETTINGS_PATH_SUBMODULES_ROOT)
+static var _last_known_submodules_root : String = ProjectSettings.get_setting(SETTINGS_PATH_SUBMODULES_ROOT, "")
 static var _is_moving_submodule_dir := false
 static var _config : ConfigFile
 static var submodules : Array[GitSubmoduleAccess] = []
