@@ -174,7 +174,8 @@ func _patch_addon_folder_item(folder_item: TreeItem, installed_plugins: Dictiona
 			all_true_test = false
 	if all_true_test:
 		# no git icon here but still dim since all children are managed
-		folder_item.set_custom_color(0, Color(1, 1, 1, 0.4))
+		folder_item.set_custom_color(0, UNINSTALLED_COLOR)
+		folder_item.set_icon_modulate(0, UNINSTALLED_COLOR)
 		return true
 	return false
 

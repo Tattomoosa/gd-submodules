@@ -30,7 +30,7 @@
 
 ## Features
 
-* Add submodule plugins from remote repos
+* Add Godot plugins as submodules from remote repos
 * Plugins [built to spec](https://docs.godotengine.org/en/stable/community/asset_library/submitting_to_assetlib.html) *just work*
 	* Installation only includes files available via `git archive`
 	* No need to specify plugin root, even for packages with multiple plugins
@@ -46,8 +46,10 @@
 ## Limitations
 
 Plugins that are stored at their repo root (instead of within `./addons/`) are not currently supported. (Support planned)
+
 Plugins which use but don't properly ignore development dependencies in their archive will list those
-dependencies as available plugins. They can still be installed independently
+dependencies as available plugins. In this case, instead of installing all plugins in the archive,
+open the repo in the settings and install only the plugins you actually want.
 
 Cannot be used to install GDExtensions. Since those require a
 build-step they cannot be installed via submodule. (No support planned, out of scope)
@@ -68,8 +70,6 @@ From your project root, which must be a valid git repo (`git init`)
 touch .submodules/.gdignore
 git submodule add git@github.com:tattomoosa/gd-submodules.git ./.submodules/tattomoosa/gd-submodules
 ln -s ./.submodules/tattomoosa/gd-submodules ./addons/gd-submodules
-echo ".submodules/**" > .gitignore
-echo "!.submodules/submodules.cfg" > .gitignore
 ```
 
 Then activate the plugin via the Plugins tab in Project Settings...
@@ -78,18 +78,29 @@ TODO image
 
 And it will find itself and can handle its own updates from here!
 
+
+
 ### Via Asset Lib
 
 > Not actually on Asset Lib yet
 
-Search for `gdsm` on Godot's Asset Library and install it. It will *not* self-manage.
+Search for `gd-submodules` on Godot's Asset Library and install it. It will *not* self-manage.
 
 > Managing itself after an Asset Lib install is a planned feature.
 
 ## Usage
 
-Open the new settings pane in Project Settings
+Open the new settings pane in Project Settings, click Add Repo.
+This makes your project start tracking 
 
+> Do NOT .gitignore the .submodules folder or the addons folder. Gd-Submodules depends on
+> git submodules to sync repo state, so the folders must be available to git for it to do
+> its job
+>
+> When cloning your project, use
+```
+git clone --recurse-submodules
+```
 ## The Future
 
 * Commandline usage
@@ -101,7 +112,7 @@ Open the new settings pane in Project Settings
 * Support more installation options
 	* From plugin project root, ignoring only project.godot
 		* Needs to be configurable between addons/{rep_name} and a custom folder
-	* Bypass archive rules
+	* Bypass archive rules, include all
 	* No symlink, true install
 * Support archive releases / GitExtension
 	* Probably out of scope

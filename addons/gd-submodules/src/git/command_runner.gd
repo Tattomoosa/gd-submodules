@@ -7,6 +7,9 @@ static var l: L.Logger:
 static var p: L.Logger:
 	get: return L.get_logger(L.LogLevel.INFO, &"Profiler:GitSubmoduleAccess")
 
+# TODO this is a stub and currently untested/unused
+# But the idea is to talk to git async, which would allow more querying of git status more often
+
 signal result(err: Error, output: Array[String])
 
 var mutex := Mutex.new()

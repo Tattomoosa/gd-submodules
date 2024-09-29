@@ -17,8 +17,8 @@ static var p: L.Logger:
 const PRINT_DEBUG_MESSAGES := true
 const DEBUG_CLASS_NAME := "GitSubmodulePlugin"
 const SUBMODULES_DEFAULT_ROOT := "res://.submodules"
-const SETTINGS_PATH_SUBMODULES_ROOT := "git_submodules/settings/paths/submodule_folder"
-const SETTINGS_PATH_SUBMODULES_CONFIG_FILE := "git_submodules/settings/paths/submodules_config"
+const SETTINGS_PATH_SUBMODULES_ROOT := "gd-submodules/settings/paths/submodule_folder"
+const SETTINGS_PATH_SUBMODULES_CONFIG_FILE := "gd-submodules/settings/paths/submodules_config"
 
 static var submodules_root := SUBMODULES_DEFAULT_ROOT:
 	get:

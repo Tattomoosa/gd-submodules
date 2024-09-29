@@ -29,14 +29,8 @@ version_control/autoload_on_startup=true
 
 enabled=PackedStringArray("res://addons/gd-submodules/plugin.cfg")
 
-[git_submodule_plugin]
+[gd-submodules]
 
-paths/submodules_root="res://.submodules"
-
-[git_submodules]
-
-settings/submodule_folder="res://.submodules"
-settings/use_file_dock_plugin=true
 settings/paths/submodule_folder="res://.submodules"
-settings/paths/config="res://.submodules.cfg"
 settings/paths/submodules_config="res://.submodules/submodules.cfg"
+settings/use_file_dock_plugin=true

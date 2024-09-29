@@ -37,6 +37,7 @@ func _ready() -> void:
 	repo_edit.text_changed.connect(_on_edit_changed.unbind(1))
 	branch_edit.text_changed.connect(_on_edit_changed.unbind(1))
 	commit_edit.text_changed.connect(_on_edit_changed.unbind(1))
+	custom_origin_edit.text_changed.connect(_on_edit_changed.unbind(1))
 	shallow_option.pressed.connect(_on_edit_changed)
 	bare_option.pressed.connect(_on_edit_changed)
 	_on_edit_changed()
@@ -55,12 +56,14 @@ func _on_edit_changed() -> void:
 	
 	var shallow_text := "--depth=1 "\
 		if shallow_option.button_pressed else ""
-	var bare_text := "--bare "\
-		if bare_option.button_pressed else ""
+	# var bare_text := "--bare "\
+	# 	if bare_option.button_pressed else ""
 
 	# Uhhh I guess you can't do a specific commit on clone?
 	# TODO Should do a clone and checkout for that case?
 	# var commit_text := commit_edit.text
+
+	var origin_string := get_origin_string()
 
 	output.clear()
 	output.print(color_tag,
@@ -68,7 +71,7 @@ func _on_edit_changed() -> void:
 		# bare_text,
 		shallow_text,
 		branch_text,
-		(get_origin_string() % ("[/color]" + repo_text + color_tag)),
+		(origin_string % ("[/color]" + repo_text + color_tag)) if "%s" in origin_string else ("[/color]%s%s" % [origin_string, color_tag]),
 		" ",
 		GitSubmodulePlugin.submodules_root.path_join(repo_text).replace("res://", "./"),
 		"[/color] ",
@@ -91,9 +94,7 @@ func add_repo() -> void:
 	var shallow := shallow_option.button_pressed
 	var bare := bare_option.button_pressed
 	var origin_string := get_origin_string()
-	var upstream_url := (origin_string % repo)\
-		if "%s" in origin_string\
-		else origin_string
+	var upstream_url := origin_string % repo if "%s" in origin_string else origin_string
 	output.print(
 		"Cloning from %s into %s..." % [
 			upstream_url,

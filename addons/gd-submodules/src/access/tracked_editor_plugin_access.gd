@@ -60,7 +60,29 @@ func uninstall() -> Error:
 	var err := DirAccess.remove_absolute(install_path)
 	if err != OK:
 		print("Failed: Could not remove folder at %s" % install_path)
+	var uninstalled_folder := install_path.split("/")[-1]
+	var delete_path := install_path.trim_suffix(uninstalled_folder)
+	# TODO doesn't seem to work, should get rid of empty folders in addons/
+	if !delete_path.ends_with("addons/"):
+		err = _dir_cleanup(delete_path)
 	return err
+
+# Walks up filesystem removing empty directories until it hits a non-empty directory
+func _dir_cleanup(path: String) -> Error:
+	var err : Error = OK
+	var cwd := path.split("/")[-1]
+	var dir := DirAccess.open(path)
+	if !dir:
+		push_warning("Remove cleanup: Could not cd to %s" % path)
+	if dir.get_files().is_empty() and dir.get_directories().is_empty():
+		err = dir.change_dir("..")
+		if err != OK:
+			push_warning("Remove cleanup: Could not cd to %s" % path.path_join(".."))
+		err = dir.remove(cwd)
+		if err != OK:
+			push_warning("Remove cleanup: Could not remove dir %s" % path, " Error: %s" % error_string(err))
+		return _dir_cleanup(dir.get_current_dir())
+	return OK
 
 func install(force := false) -> Error:
 	var dir := DirAccess.open(ADDONS_FOLDER_PATH)
@@ -78,7 +100,7 @@ func install(force := false) -> Error:
 			return ERR_ALREADY_EXISTS
 		push_error("Force set to true... Removing symlink...")
 		err = DirAccess.remove_absolute(install_path)
-		# TODO need access to _execute to force
+		# TODO would need another _execute to force... should add a helper
 		# if err != OK:
 		# 	push_error("Could not remove existing symlink via DirAccess. Using rm...")
 		# 	var link_name := install_path.split("/")[-1]

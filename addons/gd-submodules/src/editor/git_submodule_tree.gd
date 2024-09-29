@@ -115,53 +115,61 @@ func _ready() -> void:
 	create_item()
 	hide_root = true
 	columns = Column.COLUMN_SIZE
-	set_column_expand(Column.BLANK, false)
-	set_column_custom_minimum_width(Column.BLANK, 80)
-	set_column_clip_content(Column.BLANK, true)
-	set_column_expand_ratio(Column.BLANK, SIZE_SHRINK_BEGIN)
 
-	set_column_title(Column.TRACKED, "Track")
-	set_column_expand(Column.TRACKED, false)
+	var c := Column.BLANK
+	set_column_expand(c, false)
+	set_column_custom_minimum_width(c, 80)
+	set_column_clip_content(c, true)
+	set_column_expand_ratio(c, SIZE_SHRINK_BEGIN)
 
-	set_column_title(Column.LINKED, "Install")
-	set_column_expand(Column.LINKED, false)
+	c = Column.TRACKED
+	set_column_title(c, "Track")
+	set_column_expand(c, false)
 
-	set_column_title(Column.ACTIVE, "Enable")
-	set_column_expand(Column.ACTIVE, false)
+	c = Column.LINKED
+	set_column_title(c, "Install")
+	set_column_expand(c, false)
 
-	set_column_title(Column.REPO, "Repo")
-	set_column_expand(Column.REPO, true)
-	set_column_expand_ratio(Column.REPO, SIZE_EXPAND)
+	c = Column.ACTIVE
+	set_column_title(c, "Enable")
+	set_column_expand(c, false)
 
-	set_column_title(Column.BRANCH, "Branch")
-	set_column_expand(Column.BRANCH, true)
-	set_column_custom_minimum_width(Column.BRANCH, 180)
-	set_column_expand_ratio(Column.BRANCH, SIZE_SHRINK_BEGIN)
+	c = Column.REPO
+	set_column_title(c, "Repo")
+	set_column_expand(c, true)
+	set_column_expand_ratio(c, SIZE_EXPAND)
 
-	set_column_title(Column.COMMIT, "Commit")
-	set_column_expand_ratio(Column.COMMIT, SIZE_SHRINK_BEGIN)
-	set_column_custom_minimum_width(Column.COMMIT, 180)
-	set_column_expand(Column.COMMIT, true)
+	c = Column.BRANCH
+	set_column_title(c, "Branch")
+	set_column_expand(c, true)
+	set_column_custom_minimum_width(c, 180)
+	set_column_expand_ratio(c, SIZE_SHRINK_BEGIN)
 
-	set_column_title(Column.EDIT, "Edit")
-	set_column_expand(Column.EDIT, false)
-	set_column_custom_minimum_width(Column.EDIT, 0)
+	c = Column.COMMIT
+	set_column_title(c, "Commit")
+	set_column_expand_ratio(c, SIZE_SHRINK_BEGIN)
+	set_column_custom_minimum_width(c, 180)
+	set_column_expand(c, true)
 
-	for c in columns:
-		set_column_title_alignment(c, HORIZONTAL_ALIGNMENT_LEFT)
+	c = Column.EDIT
+	set_column_title(c, "Edit")
+	set_column_expand_ratio(c, SIZE_SHRINK_BEGIN)
+	set_column_expand(c, false)
+	set_column_custom_minimum_width(c, 0)
 
-	if is_visible_in_tree():
-		await _set_working()
-		build.call_deferred()
-		_set_finished()
+	for c_i in columns:
+		set_column_title_alignment(c_i, HORIZONTAL_ALIGNMENT_LEFT)
 
 	button_clicked.connect(_button_clicked)
 	item_edited.connect(_item_edited)
 	visibility_changed.connect(_on_visibility_changed)
 	confirmation_dialog.confirmed.connect(_confirmation_dialog_confirm)
 	confirmation_dialog.canceled.connect(_confirmation_dialog_cancel)
-	# Hmmmmmm
-	# EditorInterface.get_resource_filesystem().filesystem_changed.connect(reset_git_submodule_plugin)
+
+	if is_visible_in_tree():
+		await _set_working()
+		build.call_deferred()
+		_set_finished()
 
 # TODO make buttons work
 func _button_clicked(item: TreeItem, col: int, id: int, mouse_button_index: int) -> void:
@@ -348,14 +356,14 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 	c = Column.EDIT
 	item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_LEFT)
 	item.set_text(c, "")
-	item.set_cell_mode(c, TreeItem.CELL_MODE_ICON)
+	item.set_cell_mode(c, TreeItem.CELL_MODE_STRING)
 	# buttons
-	item.add_button(Column.EDIT, get_theme_icon("Edit", "EditorIcons"), EditColumnButtonIndex.EDIT_REPO)
-	item.add_button(Column.EDIT, get_theme_icon("GodotMonochrome", "EditorIcons"), EditColumnButtonIndex.EDIT_IN_GODOT)
-	item.add_button(Column.EDIT, get_theme_icon("Terminal", "EditorIcons"), EditColumnButtonIndex.TERMINAL)
-	item.set_button_tooltip_text(Column.EDIT, EditColumnButtonIndex.EDIT_REPO, "Open submodule edit window")
-	item.set_button_tooltip_text(Column.EDIT, EditColumnButtonIndex.EDIT_IN_GODOT, "Open plugin project in new Godot editor")
-	item.set_button_tooltip_text(Column.EDIT, EditColumnButtonIndex.TERMINAL, "Open terminal at submodule source root")
+	item.add_button(c, get_theme_icon("Edit", "EditorIcons"), EditColumnButtonIndex.EDIT_REPO)
+	item.add_button(c, get_theme_icon("GodotMonochrome", "EditorIcons"), EditColumnButtonIndex.EDIT_IN_GODOT)
+	item.add_button(c, get_theme_icon("Terminal", "EditorIcons"), EditColumnButtonIndex.TERMINAL)
+	item.set_tooltip_text(c, "Open submodule edit window")
+	item.set_button_tooltip_text(c, EditColumnButtonIndex.EDIT_IN_GODOT - 1, "Open plugin project in new Godot editor")
+	item.set_button_tooltip_text(c, EditColumnButtonIndex.TERMINAL - 1, "Open terminal at submodule source root")
 
 	var config_texts : PackedStringArray = []
 	for i in submodule.plugins.size():
