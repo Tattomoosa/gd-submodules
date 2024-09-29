@@ -79,8 +79,6 @@ TODO image
 
 And it will find itself and can handle its own updates from here!
 
-
-
 ### Via Asset Lib
 
 > Not actually on Asset Lib yet
