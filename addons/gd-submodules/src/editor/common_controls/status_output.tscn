@@ -1,7 +1,7 @@
 [gd_scene load_steps=26 format=4 uid="uid://doixflb7mw2y5"]
 
-[ext_resource type="Script" path="res://addons/gd-submodules/src/editor/common_controls/git_submodule_output.gd" id="1_5w8wk"]
-[ext_resource type="Script" path="res://addons/gd-submodules/src/editor/common_controls/loading_indicator.gd" id="1_u6dso"]
+[ext_resource type="Script" uid="uid://t2s07spx2aiy" path="res://addons/gd-submodules/src/editor/common_controls/git_submodule_output.gd" id="1_5w8wk"]
+[ext_resource type="Script" uid="uid://cb82y1vif1vbp" path="res://addons/gd-submodules/src/editor/common_controls/loading_indicator.gd" id="1_u6dso"]
 
 [sub_resource type="Image" id="Image_vrax1"]
 data = {
