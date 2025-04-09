@@ -69,7 +69,7 @@ static func _get_submodule_settings() -> ConfigFile:
 	if err == ERR_DOES_NOT_EXIST:
 		_save_settings()
 	elif err != OK:
-		push_error("Could not load submodules setting file, error: %s. Is setting a valid file path? %s : %s" % [
+		l.error("Could not load submodules setting file, error: %s. Is setting a valid file path? %s : %s" % [
 			error_string(err),
 			SETTINGS_PATH_SUBMODULES_CONFIG_FILE,
 			file_location
@@ -102,6 +102,14 @@ static func has_submodule_setting(repo: String, setting_name: String) -> bool:
 	if !_config:
 		_config = _get_submodule_settings()
 	return _config.has_section_key(repo, setting_name)
+
+static func remove_repo_from_settings(repo: String) -> void:
+	if !_config:
+		_config = _get_submodule_settings()
+	if _config.has_section(repo):
+		_config.erase_section(repo)
+	_save_settings()
+
 
 static func get_tracked_submodules() -> Array[GitSubmoduleAccess]:
 	var stopwatch := DebugProfiler.Stopwatch.new()
@@ -170,7 +178,9 @@ static func _get_or_create_submodules_dir() -> DirAccess:
 		var err := DirAccess.make_dir_absolute(submodules_path)
 		assert(err == OK)
 		var file := FileAccess.open(submodules_path.path_join(".gdignore"), FileAccess.WRITE)
-		file.store_buffer([])
+		var did_store_buffer := file.store_buffer([])
+		if !did_store_buffer:
+			l.error("Could not write to file '%s'" % file.get_path())
 		dir = DirAccess.open(submodules_path)
 	return dir
 

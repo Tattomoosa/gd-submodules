@@ -16,6 +16,8 @@ const GitSubmodulePlugin := preload("../../git_submodule_plugin.gd")
 const GitSubmoduleAccess := GitSubmodulePlugin.GitSubmoduleAccess
 const StatusOutput := preload("../common_controls/git_submodule_output.gd")
 
+const SUBMODULE_ALREADY_EXISTS_ERROR := 32
+
 var origin_urls := {
 	Origin.GITHUB: "git@github.com:%s.git",
 	Origin.CUSTOM: "%s"
@@ -115,6 +117,7 @@ func add_repo() -> void:
 	# if err != OK:
 		# push_error("Error cloning %s " % repo, " ",error_string(err))
 	output.loading = false
+	# if err != OK and err != SUBMODULE_ALREADY_EXISTS_ERROR:
 	if err != OK:
 		output.print(
 			"[color=red]",

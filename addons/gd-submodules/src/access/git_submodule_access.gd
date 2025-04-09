@@ -138,8 +138,12 @@ func _find_plugin_roots_recursive(path: String, ignorer: GitArchiveIgnorer) -> A
 	return cfg_paths
 
 func remove() -> Error:
+	l.debug("Removing '%s'" % repo)
 	if !uninstall_all_plugins():
 		push_error("Could not uninstall %s" % repo)
+		return FAILED
+	
+	GitSubmodulePlugin.remove_repo_from_settings(repo)
 
 	var dir := DirAccess.open(source_path)
 	if !dir:
