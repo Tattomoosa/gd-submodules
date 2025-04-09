@@ -155,7 +155,8 @@ func _ready() -> void:
 	set_column_title(c, "Edit")
 	set_column_expand_ratio(c, SIZE_SHRINK_BEGIN)
 	set_column_expand(c, false)
-	set_column_custom_minimum_width(c, 0)
+	set_column_clip_content(c, true)
+	set_column_custom_minimum_width(c, 170)
 
 	for c_i in columns:
 		set_column_title_alignment(c_i, HORIZONTAL_ALIGNMENT_LEFT)
@@ -191,7 +192,6 @@ func _button_clicked(item: TreeItem, col: int, id: int, mouse_button_index: int)
 					EditColumnButtonIndex.EDIT_REPO:
 						edit_submodule.emit(sm)
 					EditColumnButtonIndex.EDIT_IN_GODOT:
-						# var exe_path := OS.get_executable_path()
 						var os_err := OS.create_instance(["-e", "--path", ProjectSettings.globalize_path(sm.source_path)])
 						if os_err == -1:
 							push_error("Failed to create godot instance")
@@ -322,7 +322,7 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 	item.set_selectable(c, false)
 	item.set_cell_mode(c, TreeItem.CELL_MODE_CUSTOM)
 
-	var icon_scale := 16 * EditorInterface.get_editor_scale()
+	var icon_scale := int(16 * EditorInterface.get_editor_scale())
 	for c_i: int in [Column.TRACKED, Column.LINKED, Column.ACTIVE]:
 		item.set_cell_mode(c_i, TreeItem.CELL_MODE_CHECK)
 		item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_CENTER)
@@ -354,16 +354,19 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 		item.set_selectable(c_i, true)
 
 	c = Column.EDIT
-	item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_LEFT)
+	# item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_LEFT)
+	item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_FILL)
 	item.set_text(c, "")
+	# item.set_cell_mode(c, TreeItem.CELL_MODE_STRING)
 	item.set_cell_mode(c, TreeItem.CELL_MODE_STRING)
+	# item.set_cell_mode(c, TreeItem.CELL_MODE_ICON)
 	# buttons
 	item.add_button(c, get_theme_icon("Edit", "EditorIcons"), EditColumnButtonIndex.EDIT_REPO)
 	item.add_button(c, get_theme_icon("GodotMonochrome", "EditorIcons"), EditColumnButtonIndex.EDIT_IN_GODOT)
 	item.add_button(c, get_theme_icon("Terminal", "EditorIcons"), EditColumnButtonIndex.TERMINAL)
-	item.set_tooltip_text(c, "Open submodule edit window")
-	item.set_button_tooltip_text(c, EditColumnButtonIndex.EDIT_IN_GODOT - 1, "Open plugin project in new Godot editor")
-	item.set_button_tooltip_text(c, EditColumnButtonIndex.TERMINAL - 1, "Open terminal at submodule source root")
+	item.set_button_tooltip_text(c, EditColumnButtonIndex.EDIT_REPO, "Open submodule edit window")
+	item.set_button_tooltip_text(c, EditColumnButtonIndex.EDIT_IN_GODOT, "Open plugin project in new Godot editor")
+	item.set_button_tooltip_text(c, EditColumnButtonIndex.TERMINAL, "Open terminal at submodule source root")
 
 	var config_texts : PackedStringArray = []
 	for i in submodule.plugins.size():
