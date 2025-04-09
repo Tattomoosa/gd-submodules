@@ -10,7 +10,7 @@ const DebugProfiler := preload("./util/profiler.gd")
 
 const L := preload("./util/logger.gd")
 static var l: L.Logger:
-	get: return L.get_logger(L.LogLevel.INFO, &"GitSubmodulePlugin")
+	get: return L.get_logger(L.LogLevel.DEBUG, &"GitSubmodulePlugin")
 static var p: L.Logger:
 	get: return L.get_logger(L.LogLevel.WARN, "Profiler:GitSubmodulePlugin")
 
@@ -39,7 +39,7 @@ static var _is_moving_submodule_dir := false
 static var _config : ConfigFile
 static var submodules : Array[GitSubmoduleAccess] = []
 
-# TODO have a cmd helper
+# TODO have a cmd helper - wip at command_runner.gd
 static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
 	l.debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])

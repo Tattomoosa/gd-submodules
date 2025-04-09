@@ -34,18 +34,17 @@ func _enter_tree() -> void:
   var stopwatch := EditorProfiler.Stopwatch.new()
   _add_defaults_to_missing_settings()
   stopwatch.restart_and_log("load ProjectSettings", p.info)
-
-  add_control_to_container(CONTAINER_PROJECT_SETTING_TAB_RIGHT, submodule_settings)
-  submodule_settings.get_parent().move_child(submodule_settings, 4)
+  _add_project_settings_tab()
   stopwatch.restart_and_log("add settings panel", p.info)
-
-  # Times itself
   GitSubmodulePlugin.reset_internal_state()
-
-  stopwatch.restart()
+  stopwatch.restart_and_log("reset internal state", p.info)
   if ProjectSettings.get_setting(SETTINGS_PATH_USE_FILE_DOCK_PLUGIN):
     _add_file_dock_plugin()
     stopwatch.restart_and_log("add file dock plugin", p.info)
+
+func _add_project_settings_tab() -> void:
+  add_control_to_container(CONTAINER_PROJECT_SETTING_TAB_RIGHT, submodule_settings)
+  submodule_settings.get_parent().move_child(submodule_settings, 4)
 
 func _exit_tree() -> void:
   _remove_file_dock_plugin()

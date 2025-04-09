@@ -1,6 +1,5 @@
 extends RefCounted
 
-
 const Ignorer := preload("../git/git_ignorer.gd")
 
 ## Name used by EditorInterface (path relative to /addons/)
@@ -9,6 +8,10 @@ var name : String
 var source_path : String
 ## Path to root folder in project
 var install_path : String
+
+const L := preload("../util/logger.gd")
+static var l: L.Logger:
+	get: return L.get_logger(L.LogLevel.INFO, &"TrackedEditorPluginAccess")
 
 const ADDONS_FOLDER_PATH := "res://addons/"
 
@@ -38,16 +41,31 @@ func get_project_install_path() -> String:
 
 func is_installed() -> bool:
 	if !DirAccess.dir_exists_absolute(install_path):
+		l.debug("install path '", install_path, "' does not exist!")
 		return false
 	var dir := DirAccess.open("res://")
 	if !dir.is_link(install_path):
+		l.debug("install path '", install_path, "' is not symlink!")
 		return false
-	var link_path := ProjectSettings.localize_path(
-			dir.read_link(install_path))
-	link_path = link_path.trim_suffix("/")
+	# var link_path := ProjectSettings.localize_path(dir.read_link(install_path))
+	# link_path = link_path.trim_suffix("/")
+	var link_path := _get_link_path()
+	l.debug("\nLink path: ", link_path, "\nSource path: ", source_path)
 	if link_path == source_path:
 		return true
 	return false
+
+func _get_link_path() -> String:
+	var dir := DirAccess.open("res://")
+	var link_path := ProjectSettings.localize_path(dir.read_link(install_path))
+	if link_path.is_relative_path():
+		# TODO i think this works? and handles any relative links?
+		# gd-submodules itself gets a relative link via install instructions
+		# TODO check if non-relative links causes issues cloning with installed plugins
+		var base_install_path := install_path.trim_suffix(install_path.get_file())
+		link_path = (base_install_path.path_join(link_path)).simplify_path()
+	link_path = link_path.trim_suffix("/")
+	return link_path
 
 func uninstall() -> Error:
 	print("Uninstalling %s from %s" % [name, install_path])

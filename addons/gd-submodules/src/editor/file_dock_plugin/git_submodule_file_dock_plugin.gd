@@ -122,8 +122,10 @@ func patch_dock() -> void:
 	var submodules := GitSubmodulePlugin.get_tracked_submodules()
 	var installed_plugins := {}
 	for sm in submodules:
-		for ip in sm.get_installed_plugins():
-			installed_plugins[ip.name] = {"plugin": ip, "submodule": sm}
+		for installed_plugin in sm.get_installed_plugins():
+			# l.debug("Found installed plugin: ", installed_plugin.name)
+			installed_plugins[installed_plugin.name] = {"plugin": installed_plugin, "submodule": sm}
+	l.debug("Found installed plugins: ", installed_plugins.keys())
 	stopwatch.restart_and_log("load submodules", p.debug)
 
 	if installed_plugins.is_empty():
@@ -135,15 +137,16 @@ func patch_dock() -> void:
 		_patch_addon_folder_item(addon_item, installed_plugins)
 		sw.restart_and_log("patch %s" % addon_item.get_text(0), p.debug)
 		addon_item = addon_item.get_next()
+	l.debug("Finished patching file dock")
 	stopwatch.restart_and_log("patch folder items", p.info)
 
 # Patch file dock's tree item with git plugin information
 @warning_ignore("return_value_discarded")
 func _patch_addon_folder_item(folder_item: TreeItem, installed_plugins: Dictionary, parent: String = "") -> bool:
-	l.debug("Evaluating patch for " + folder_item.get_text(0))
+	# l.debug("Evaluating patch for " + folder_item.get_text(0))
 	var folder_name := folder_item.get_text(0)
 	var from_addons_path := parent.path_join(folder_name)
-	l.debug("Matching path: " + from_addons_path)
+	# l.debug("Matching path: " + from_addons_path)
 	var matching_addon_paths : Array[String]
 	matching_addon_paths.assign(
 		installed_plugins.keys().filter(
@@ -151,9 +154,9 @@ func _patch_addon_folder_item(folder_item: TreeItem, installed_plugins: Dictiona
 				return x.begins_with(from_addons_path))
 		)
 	# no match
-	l.debug("Matching addon paths " + str(matching_addon_paths))
+	# l.debug("Matching addon paths " + str(matching_addon_paths))
 	if matching_addon_paths.is_empty():
-		l.debug("No matching addon paths found for " + folder_name)
+		# l.debug("No matching addon paths found for entry '" + folder_name + "'")
 		return false
 	# one match, patch item
 	if matching_addon_paths.size() == 1 and from_addons_path == matching_addon_paths[0]:

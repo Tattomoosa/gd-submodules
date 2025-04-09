@@ -118,10 +118,10 @@ func add_repo() -> void:
 	if err != OK:
 		output.print(
 			"[color=red]",
-			"Error encountered during git clone: %s\n" % error_string(err),
+			"Error %d encountered during git clone: %s\n" % [err, error_string(err)],
 			"Git Output:\n",
-			# "\n".join(out),
-			out[0],
+			"\n".join(out),
+			# out[0],
 			"[/color]",
 		)
 		return

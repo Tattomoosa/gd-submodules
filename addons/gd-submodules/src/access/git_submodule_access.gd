@@ -8,7 +8,7 @@ const GitArchiveIgnorer := GitIgnorer.GitArchiveIgnorer
 const DebugProfiler := preload("../util/profiler.gd")
 const L := preload("../util/logger.gd")
 static var l: L.Logger:
-	get: return L.get_logger(L.LogLevel.WARN, &"GitSubmoduleAccess")
+	get: return L.get_logger(L.LogLevel.DEBUG, &"GitSubmoduleAccess")
 static var p: L.Logger:
 	get: return L.get_logger(L.LogLevel.WARN, &"Profiler:GitSubmoduleAccess")
 
@@ -52,10 +52,14 @@ func get_plugin(plugin_name: String) -> TrackedEditorPluginAccess:
 	return null
 
 func get_installed_plugins() -> Array[TrackedEditorPluginAccess]:
+	l.debug("Getting installed plugins from repo: ", repo)
 	var installed : Array[TrackedEditorPluginAccess]
 	for plugin in plugins:
 		if plugin.is_installed():
+			l.debug(plugin.name, " is installed")
 			installed.push_back(plugin)
+		else:
+			l.debug(plugin.name, " is not installed")
 	return installed
 
 func uninstall_all_plugins() -> bool:
@@ -366,7 +370,7 @@ func init(output : Array[String] = []) -> int:
 static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
 	var os_cmd := 'cd \"%s\" && %s' % [path, cmd]
-	l.debug("Executing " + os_cmd, l)
+	l.debug("Executing " + os_cmd)
 	var sw := DebugProfiler.Stopwatch.new()
 	var err := OS.execute(
 		"$SHELL",
