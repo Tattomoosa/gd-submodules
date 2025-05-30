@@ -26,7 +26,10 @@
 	<br/>
 </div>
 
-> This plugin is in pre-release as it has not been tested for many configurations of Windows yet. Issues / pull requests appreciated!
+> Due to https://github.com/godotengine/godot-proposals/issues/1329 this only supports Mac/Linux. I don't have
+> a windows machine to test on, but I have an idea for an alternative installation
+> method for windows support. See https://github.com/Tattomoosa/gd-submodules/issues/1
+> for relevant discussion
 
 ## Features
 
