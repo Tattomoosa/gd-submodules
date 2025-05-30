@@ -3,9 +3,9 @@ extends RefCounted
 const DebugProfiler := preload("../util/profiler.gd")
 const L := preload("../util/logger.gd")
 static var l: L.Logger:
-	get: return L.get_logger(L.LogLevel.INFO, &"GitSubmoduleAccess")
+	get: return L.get_logger(L.LogLevel.INFO, &"CommandRunner")
 static var p: L.Logger:
-	get: return L.get_logger(L.LogLevel.INFO, &"Profiler:GitSubmoduleAccess")
+	get: return L.get_logger(L.LogLevel.INFO, &"Profiler:CommandRunner")
 
 # TODO this is a stub and currently untested/unused
 # But the idea is to talk to git async, which would allow more querying of git status more often

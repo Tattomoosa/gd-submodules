@@ -42,7 +42,7 @@ func init_plugin() -> void:
 		]
 	)
 	var out : Array[String] = []
-	var err := submodule.init(out)
+	var err := submodule.create_new_plugin_project(out)
 	if err != OK:
 		output.print(
 			"[color=red]",

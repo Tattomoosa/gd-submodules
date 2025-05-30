@@ -28,6 +28,7 @@ func is_enabled() -> bool:
 func set_enabled(value: bool = true) -> void:
 	if is_enabled() != value:
 		EditorInterface.set_plugin_enabled(name, value)
+	l.debug("[ %s ]" % name, " Enabled: ", is_enabled())
 
 func enable() -> void:
 	set_enabled()
@@ -47,12 +48,10 @@ func is_installed() -> bool:
 	if !dir.is_link(install_path):
 		l.debug("install path '", install_path, "' is not symlink!")
 		return false
-	# var link_path := ProjectSettings.localize_path(dir.read_link(install_path))
-	# link_path = link_path.trim_suffix("/")
 	var link_path := _get_link_path()
-	l.debug("\nLink path: ", link_path, "\nSource path: ", source_path)
 	if link_path == source_path:
 		return true
+	l.debug("[ %s ]" % name, "Link path does not equal source path! \nLink path: ", link_path, "\nSource path: ", source_path)
 	return false
 
 func _get_link_path() -> String:
@@ -68,16 +67,16 @@ func _get_link_path() -> String:
 	return link_path
 
 func uninstall() -> Error:
-	print("Uninstalling %s from %s" % [name, install_path])
+	l.debug("Uninstalling %s from %s" % [name, install_path])
 	if !is_installed():
-		print("Failed: Not installed")
+		l.error("Failed: Not installed")
 		return ERR_FILE_BAD_PATH
 	if !DirAccess.dir_exists_absolute(install_path):
-		print("Failed: Directory doesn't exist")
+		l.error("Failed: Directory doesn't exist")
 		return ERR_DOES_NOT_EXIST
 	var err := DirAccess.remove_absolute(install_path)
 	if err != OK:
-		print("Failed: Could not remove folder at %s" % install_path)
+		l.error("Failed: Could not remove folder at %s" % install_path)
 	var uninstalled_folder := install_path.split("/")[-1]
 	var delete_path := install_path.trim_suffix(uninstalled_folder)
 	# TODO doesn't seem to work, should get rid of empty folders in addons/

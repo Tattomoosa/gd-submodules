@@ -181,8 +181,8 @@ func _button_clicked(item: TreeItem, col: int, id: int, mouse_button_index: int)
 		Column.REPO:
 			var meta : Variant = item.get_metadata(0)
 			if meta is GitSubmoduleAccess:
-				var sm := meta as GitSubmoduleAccess
 				# TODO
+				var sm := meta as GitSubmoduleAccess
 				pass
 		Column.EDIT:
 			var meta : Variant = item.get_metadata(0)
@@ -322,7 +322,8 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 	item.set_selectable(c, false)
 	item.set_cell_mode(c, TreeItem.CELL_MODE_CUSTOM)
 
-	var icon_scale := int(16 * EditorInterface.get_editor_scale())
+	# var icon_scale := int(16 * EditorInterface.get_editor_scale())
+	var icon_scale := 16
 	for c_i: int in [Column.TRACKED, Column.LINKED, Column.ACTIVE]:
 		item.set_cell_mode(c_i, TreeItem.CELL_MODE_CHECK)
 		item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_CENTER)
@@ -337,7 +338,7 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 
 	c = Column.REPO
 	item.set_text(c, submodule.repo)
-	item.add_button(c, REPO_CHANGES_ICON, 0)
+	item.add_button(c, _resize_icon(REPO_CHANGES_ICON.get_image()), 0, false)
 
 	c = Column.BRANCH
 	item.set_text(c, submodule.branch_name())
@@ -392,16 +393,17 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 		plugin_item.set_cell_mode(c, TreeItem.CELL_MODE_CUSTOM)
 
 		c = Column.LINKED
+		var icon_width := int(16.0 * EditorInterface.get_editor_scale())
 		plugin_item.set_cell_mode(c, TreeItem.CELL_MODE_CHECK)
 		plugin_item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_CENTER)
-		plugin_item.set_icon_max_width(c, 16 * EditorInterface.get_editor_scale())
+		plugin_item.set_icon_max_width(c, icon_width)
 		plugin_item.set_icon(c, get_theme_icon("Load", "EditorIcons"))
-		plugin_item.set_icon_max_width(c, 16 * EditorInterface.get_editor_scale())
+		plugin_item.set_icon_max_width(c, icon_width)
 
 		c = Column.ACTIVE
 		plugin_item.set_cell_mode(c, TreeItem.CELL_MODE_CHECK)
 		plugin_item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_CENTER)
-		plugin_item.set_icon_max_width(c, 16 * EditorInterface.get_editor_scale())
+		plugin_item.set_icon_max_width(c, icon_width)
 
 		var cfg_name : String = cfg_file.get_value("plugin", "name", "")
 		var cfg_version : String = cfg_file.get_value("plugin", "version", "")
@@ -544,3 +546,10 @@ func _is_in_project_indeterminate(submodule: GitSubmoduleAccess) -> bool:
 
 func _is_enabled_indeterminate(submodule: GitSubmoduleAccess) -> bool:
 	return !submodule.has_all_plugins_enabled() and submodule.has_plugin_enabled()
+
+# Resize icon to 16*16
+func _resize_icon(image: Image) -> Texture2D:
+	var editor_scale := EditorInterface.get_editor_scale()
+	var dim := int(16 * editor_scale)
+	image.resize(dim, dim)
+	return ImageTexture.create_from_image(image)

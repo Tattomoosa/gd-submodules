@@ -7,6 +7,7 @@ var import_local_index := 0
 var disable_plugin_index := 2
 
 func _ready() -> void:
+	icon = get_theme_icon("GuiTabMenuHl", "EditorIcons")
 	var popup := get_popup()
 	popup.id_pressed.connect(_handle_popup_pressed)
 

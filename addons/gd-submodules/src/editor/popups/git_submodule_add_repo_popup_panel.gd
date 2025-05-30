@@ -4,7 +4,7 @@ extends PopupPanel
 signal added
 
 const L := preload("../../util/logger.gd")
-static var _l: L.Logger:
+static var l: L.Logger:
 	get: return L.get_logger(L.LogLevel.INFO, &"GitSubmoduleEditorPlugin")
 
 enum Origin {
@@ -117,8 +117,9 @@ func add_repo() -> void:
 	# if err != OK:
 		# push_error("Error cloning %s " % repo, " ",error_string(err))
 	output.loading = false
-	# if err != OK and err != SUBMODULE_ALREADY_EXISTS_ERROR:
-	if err != OK:
+	# TODO why does git see the submodule still exist when folder is gone and .git/modules/.submodules is gone and .gitmodules is updated?
+	if err != OK and err != SUBMODULE_ALREADY_EXISTS_ERROR:
+	# if err != OK:
 		output.print(
 			"[color=red]",
 			"Error %d encountered during git clone: %s\n" % [err, error_string(err)],

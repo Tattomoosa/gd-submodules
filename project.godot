@@ -34,3 +34,7 @@ enabled=PackedStringArray("res://addons/gd-submodules/plugin.cfg")
 settings/paths/submodule_folder="res://.submodules"
 settings/paths/submodules_config="res://.submodules/submodules.cfg"
 settings/use_file_dock_plugin=true
+
+[gui]
+
+theme/custom="uid://bgvesyvsweuhd"

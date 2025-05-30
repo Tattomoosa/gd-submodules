@@ -6,7 +6,7 @@ const GitSubmoduleSettingsTreeScene := preload("./src/editor/git_submodule_proje
 const GitSubmoduleFileDockPugin := preload(
     "./src/editor/file_dock_plugin/git_submodule_file_dock_plugin.gd"
 )
-const EditorProfiler := preload("src/util/profiler.gd")
+const GitSubmoduleEditorProfiler := preload("src/util/profiler.gd")
 
 const L := preload("src/util/logger.gd")
 static var l: L.Logger:
@@ -31,7 +31,7 @@ func _enter_tree() -> void:
   await get_tree().process_frame
   await get_tree().process_frame
 
-  var stopwatch := EditorProfiler.Stopwatch.new()
+  var stopwatch := GitSubmoduleEditorProfiler.Stopwatch.new()
   _add_defaults_to_missing_settings()
   stopwatch.restart_and_log("load ProjectSettings", p.info)
   _add_project_settings_tab()

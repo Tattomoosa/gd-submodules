@@ -39,8 +39,8 @@ func initialize() -> void:
 	# TODO Resize source icon to 16x16
 	git_icon = _resize_icon(GIT_ICON.get_image())
 	# TODO placeholder, need better git status icons
-	changes_icon = REPO_CHANGES_ICON
-	plugin_icon = GIT_PLUGIN_ICON
+	changes_icon = _resize_icon(REPO_CHANGES_ICON.get_image())
+	plugin_icon = _resize_icon(GIT_PLUGIN_ICON.get_image())
 	EditorInterface.get_editor_main_screen().add_child(self)
 	file_tree = _find_file_tree()
 	if !file_tree:

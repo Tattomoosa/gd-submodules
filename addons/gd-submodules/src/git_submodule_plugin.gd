@@ -110,7 +110,6 @@ static func remove_repo_from_settings(repo: String) -> void:
 		_config.erase_section(repo)
 	_save_settings()
 
-
 static func get_tracked_submodules() -> Array[GitSubmoduleAccess]:
 	var stopwatch := DebugProfiler.Stopwatch.new()
 	var repos := _get_tracked_repos(get_submodules_root_path())
@@ -120,7 +119,9 @@ static func get_tracked_submodules() -> Array[GitSubmoduleAccess]:
 	# clear removed
 	for sm in submodules:
 		if sm.repo not in repos:
+			l.debug("Submodule repo '%s' no longer exists" % sm.repo)
 			submodules.erase(sm)
+			remove_repo_from_settings(sm.repo)
 	stopwatch.restart_and_log("erase invalidated submodules", p.debug)
 	# populate new
 	var added_count : int = 0
@@ -166,7 +167,7 @@ static func get_submodules_root_path() -> String:
 	var root := submodules_root
 	# TODO abs paths windows?
 	if !(root.begins_with("res://") or root.begins_with("user://") or root.begins_with("/")):
-		push_warning("submodules root '%s' does not begin with res://, user://, or / - prefixing with 'res://'" % root)
+		l.warn("submodules root '%s' does not begin with res://, user://, or / - prefixing with 'res://'" % root)
 		root = "res://" + root
 	return root
 
