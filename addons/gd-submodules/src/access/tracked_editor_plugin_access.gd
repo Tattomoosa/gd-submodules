@@ -9,10 +9,6 @@ var source_path : String
 ## Path to root folder in project
 var install_path : String
 
-const L := preload("../util/logger.gd")
-static var l: L.Logger:
-	get: return L.get_logger(L.LogLevel.INFO, &"TrackedEditorPluginAccess")
-
 const ADDONS_FOLDER_PATH := "res://addons/"
 
 func _init(
@@ -28,7 +24,7 @@ func is_enabled() -> bool:
 func set_enabled(value: bool = true) -> void:
 	if is_enabled() != value:
 		EditorInterface.set_plugin_enabled(name, value)
-	l.debug("[ %s ]" % name, " Enabled: ", is_enabled())
+	print("[ %s ]" % name, " Enabled: ", is_enabled())
 
 func enable() -> void:
 	set_enabled()
@@ -42,16 +38,16 @@ func get_project_install_path() -> String:
 
 func is_installed() -> bool:
 	if !DirAccess.dir_exists_absolute(install_path):
-		l.debug("install path '", install_path, "' does not exist!")
+		print("install path '", install_path, "' does not exist!")
 		return false
 	var dir := DirAccess.open("res://")
 	if !dir.is_link(install_path):
-		l.debug("install path '", install_path, "' is not symlink!")
+		print("install path '", install_path, "' is not symlink!")
 		return false
 	var link_path := _get_link_path()
 	if link_path == source_path:
 		return true
-	l.debug("[ %s ]" % name, "Link path does not equal source path! \nLink path: ", link_path, "\nSource path: ", source_path)
+	print("[ %s ]" % name, "Link path does not equal source path! \nLink path: ", link_path, "\nSource path: ", source_path)
 	return false
 
 func _get_link_path() -> String:
@@ -67,16 +63,16 @@ func _get_link_path() -> String:
 	return link_path
 
 func uninstall() -> Error:
-	l.debug("Uninstalling %s from %s" % [name, install_path])
+	print("Uninstalling %s from %s" % [name, install_path])
 	if !is_installed():
-		l.error("Failed: Not installed")
+		print("Failed: Not installed")
 		return ERR_FILE_BAD_PATH
 	if !DirAccess.dir_exists_absolute(install_path):
-		l.error("Failed: Directory doesn't exist")
+		print("Failed: Directory doesn't exist")
 		return ERR_DOES_NOT_EXIST
 	var err := DirAccess.remove_absolute(install_path)
 	if err != OK:
-		l.error("Failed: Could not remove folder at %s" % install_path)
+		print("Failed: Could not remove folder at %s" % install_path)
 	var uninstalled_folder := install_path.split("/")[-1]
 	var delete_path := install_path.trim_suffix(uninstalled_folder)
 	# TODO doesn't seem to work, should get rid of empty folders in addons/

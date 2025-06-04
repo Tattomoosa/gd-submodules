@@ -1,12 +1,5 @@
 extends RefCounted
 
-const DebugProfiler := preload("../util/profiler.gd")
-const L := preload("../util/logger.gd")
-static var l: L.Logger:
-	get: return L.get_logger(L.LogLevel.INFO, &"CommandRunner")
-static var p: L.Logger:
-	get: return L.get_logger(L.LogLevel.INFO, &"Profiler:CommandRunner")
-
 # TODO this is a stub and currently untested/unused
 # But the idea is to talk to git async, which would allow more querying of git status more often
 
@@ -25,7 +18,7 @@ var os_err := 0
 func _init() -> void:
 	var err := thread.start(_thread_fn)
 	if err != OK:
-		l.error("Could not create thread")
+		push_error("Could not create thread")
 
 func _thread_fn() -> void:
 	while true:
@@ -54,12 +47,10 @@ func get_results(err: int, output: Array[String]) -> void:
 static func _execute_at(path: String, p_cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
 	var os_cmd := 'cd \"%s\" && %s' % [path, p_cmd]
-	l.debug("Executing " + os_cmd, l)
-	var sw := DebugProfiler.Stopwatch.new()
+	print("Executing " + os_cmd)
 	var err := OS.execute(
 		"$SHELL",
 		["-lc", os_cmd],
 		output,
 		true)
-	sw.restart_and_log("execute '%s' for %s" % [p_cmd, path], p.debug)
 	return err

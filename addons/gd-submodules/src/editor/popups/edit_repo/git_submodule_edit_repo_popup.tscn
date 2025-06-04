@@ -1,15 +1,7 @@
-[gd_scene load_steps=9 format=4 uid="uid://pegon4ube686"]
+[gd_scene load_steps=5 format=4 uid="uid://dxf7cih2l4btw"]
 
-[ext_resource type="Script" uid="uid://dhvt1wu0rg7bs" path="res://addons/gd-submodules/src/editor/popups/git_submodule_add_repo_popup_panel.gd" id="1_cltv7"]
-[ext_resource type="PackedScene" uid="uid://doixflb7mw2y5" path="res://addons/gd-submodules/src/editor/common_controls/status_output.tscn" id="2_rns2v"]
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_kn8k3"]
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_4dnr6"]
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_5yre5"]
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_tdpem"]
+[ext_resource type="Script" uid="uid://db4h56ds5blvy" path="res://addons/gd-submodules/src/editor/popups/edit_repo/git_submodule_edit_repo_popup.gd" id="1_f53im"]
+[ext_resource type="PackedScene" uid="uid://doixflb7mw2y5" path="res://addons/gd-submodules/src/editor/common_controls/status_output.tscn" id="1_rpoq2"]
 
 [sub_resource type="Image" id="Image_pmxx1"]
 data = {
@@ -973,21 +965,19 @@ cache/0/16/0/glyphs/268436020/size = Vector2(12, 14)
 cache/0/16/0/glyphs/268436020/uv_rect = Rect2(211, 135, 12, 14)
 cache/0/16/0/glyphs/268436020/texture_idx = 0
 
-[node name="PopupPanel" type="PopupPanel"]
-auto_translate_mode = 1
-title = "Add Git Submodule"
-initial_position = 2
-size = Vector2i(1380, 746)
-unresizable = false
+[node name="GitSubmoduleEditRepoPopup" type="PopupPanel"]
+title = "Edit Git Submodule"
+initial_position = 1
+size = Vector2i(1000, 679)
 borderless = false
 force_native = true
-script = ExtResource("1_cltv7")
+script = ExtResource("1_f53im")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 offset_left = 4.0
 offset_top = 4.0
-offset_right = 1376.0
-offset_bottom = 742.0
+offset_right = 996.0
+offset_bottom = 675.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
@@ -1006,33 +996,14 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "author/repo"
+editable = false
 expand_to_text_length = true
 
 [node name="OriginLabel" type="Label" parent="VBoxContainer/Input"]
 layout_mode = 2
 text = "Origin"
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/Input"]
-layout_mode = 2
-
-[node name="OriginMenu" type="OptionButton" parent="VBoxContainer/Input/HBoxContainer2"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 0)
-layout_mode = 2
-size_flags_vertical = 3
-clip_text = true
-expand_icon = true
-selected = 0
-item_count = 3
-popup/item_0/text = "GitHub"
-popup/item_0/id = 0
-popup/item_1/id = 9999
-popup/item_1/disabled = true
-popup/item_1/separator = true
-popup/item_2/text = "Custom                                                                           "
-popup/item_2/id = 1
-
-[node name="CustomOriginEdit" type="LineEdit" parent="VBoxContainer/Input/HBoxContainer2"]
+[node name="OriginEdit" type="LineEdit" parent="VBoxContainer/Input"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -1049,106 +1020,20 @@ layout_mode = 2
 placeholder_text = "(use default)"
 
 [node name="CommitLabel" type="Label" parent="VBoxContainer/Input"]
-visible = false
 layout_mode = 2
 text = "Commit:"
 
 [node name="CommitEdit" type="LineEdit" parent="VBoxContainer/Input"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 placeholder_text = "(use latest)"
 
 [node name="Label" type="Label" parent="VBoxContainer/Input"]
-layout_mode = 2
-text = "Clone Options:"
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Input"]
-layout_mode = 2
-
-[node name="ShallowOption" type="CheckBox" parent="VBoxContainer/Input/HBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-button_pressed = true
-text = "Shallow"
-
-[node name="BareOption" type="CheckBox" parent="VBoxContainer/Input/HBoxContainer"]
-unique_name_in_owner = true
 visible = false
 layout_mode = 2
-text = "Bare"
+text = "Options:"
 
-[node name="AddSubmoduleOption" type="CheckBox" parent="VBoxContainer/Input/HBoxContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-button_pressed = true
-text = "Add as git submodule"
-
-[node name="InstallAndEnableOption" type="CheckBox" parent="VBoxContainer/Input/HBoxContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-tooltip_text = "Enable immediately after cloning."
-disabled = true
-text = "Install & Enable"
-
-[node name="InstallMethod" type="Label" parent="VBoxContainer/Input"]
-layout_mode = 2
-text = "Install Method:"
-
-[node name="GridContainer2" type="GridContainer" parent="VBoxContainer/Input"]
-layout_mode = 2
-columns = 3
-
-[node name="SymlinkOption" type="CheckBox" parent="VBoxContainer/Input/GridContainer2"]
-layout_mode = 2
-tooltip_text = "Install via symlink at plugin roots."
-disabled = true
-button_pressed = true
-button_group = SubResource("ButtonGroup_kn8k3")
-text = "Symlink"
-
-[node name="CopyOption" type="CheckBox" parent="VBoxContainer/Input/GridContainer2"]
-layout_mode = 2
-tooltip_text = "Install by copying all files into project (TODO not implemented)"
-disabled = true
-button_group = SubResource("ButtonGroup_4dnr6")
-text = "Copy"
-
-[node name="InstallRules" type="Label" parent="VBoxContainer/Input"]
-layout_mode = 2
-text = "Install Rules:"
-
-[node name="GridContainer" type="GridContainer" parent="VBoxContainer/Input"]
-layout_mode = 2
-columns = 3
-
-[node name="NoInstallRulesOption" type="CheckBox" parent="VBoxContainer/Input/GridContainer"]
-layout_mode = 2
-tooltip_text = "All folders under res://addons/ will be included (TODO not implemented)"
-disabled = true
-button_group = SubResource("ButtonGroup_5yre5")
-text = "None"
-
-[node name="ArchiveInstallRulesOption" type="CheckBox" parent="VBoxContainer/Input/GridContainer"]
-layout_mode = 2
-tooltip_text = "Git archive rules will be used to selectively ignore
-plugins when installing into the project."
-disabled = true
-button_pressed = true
-button_group = SubResource("ButtonGroup_tdpem")
-text = "Archive"
-
-[node name="CustomInstallRulesOption" type="CheckBox" parent="VBoxContainer/Input/GridContainer"]
-visible = false
-layout_mode = 2
-tooltip_text = "Install via custom rules (TODO unimplemented)"
-disabled = true
-button_group = SubResource("ButtonGroup_tdpem")
-text = "Custom"
-
-[node name="StatusOutput" parent="VBoxContainer" instance=ExtResource("2_rns2v")]
+[node name="StatusOutput" parent="VBoxContainer" instance=ExtResource("1_rpoq2")]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/normal_font = SubResource("FontFile_egpdy")
@@ -1163,12 +1048,11 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Cancel"
 
-[node name="AddButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+[node name="CheckoutButton" type="Button" parent="VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Add"
+text = "Checkout"
 
-[connection signal="item_selected" from="VBoxContainer/Input/HBoxContainer2/OriginMenu" to="." method="update_origin"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/CancelButton" to="." method="hide"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer/AddButton" to="." method="add_repo"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/CheckoutButton" to="." method="checkout"]

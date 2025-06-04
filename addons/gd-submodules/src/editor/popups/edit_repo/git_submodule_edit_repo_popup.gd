@@ -3,11 +3,11 @@ extends PopupPanel
 
 signal checked_out
 
-const GitSubmodulePlugin := preload("../../git_submodule_plugin.gd")
+const GitSubmodulePlugin := preload("uid://c567rhmdh8ttx") # git_submodule_plugin.gd
 const GitSubmoduleAccess := GitSubmodulePlugin.GitSubmoduleAccess
 
 var submodule : GitSubmoduleAccess
-const StatusOutput := preload("../common_controls/git_submodule_output.gd")
+const StatusOutput := preload("uid://t2s07spx2aiy") # git_submodule_output.gd
 
 @onready var repo_edit: LineEdit = %RepoEdit
 @onready var origin_edit: LineEdit = %OriginEdit

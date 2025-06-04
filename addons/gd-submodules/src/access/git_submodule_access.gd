@@ -5,13 +5,6 @@ const TrackedEditorPluginAccess := preload("./tracked_editor_plugin_access.gd")
 const GitIgnorer := preload("../git/git_ignorer.gd")
 const GitArchiveIgnorer := GitIgnorer.GitArchiveIgnorer
 
-const DebugProfiler := preload("../util/profiler.gd")
-const L := preload("../util/logger.gd")
-static var l: L.Logger:
-	get: return L.get_logger(L.LogLevel.INFO, &"GitSubmoduleAccess")
-static var p: L.Logger:
-	get: return L.get_logger(L.LogLevel.WARN, &"Profiler:GitSubmoduleAccess")
-
 var repo : String
 var source_path : String
 var plugins : Array[TrackedEditorPluginAccess]
@@ -30,14 +23,11 @@ func _init(p_repo: String) -> void:
 	plugins = _get_plugins(false)
 
 func _get_plugins(allow_cached := true) -> Array[TrackedEditorPluginAccess]:
-	var sw := DebugProfiler.Stopwatch.new()
 	var roots := _find_plugin_roots(allow_cached)
-	sw.restart_and_log("[ %s ] Found plugin roots" % repo, p.debug)
 	var plugs : Array[TrackedEditorPluginAccess] = []
 	for root in roots:
 		var plug := TrackedEditorPluginAccess.new(root)
 		plugs.push_back(plug)
-		sw.restart_and_log("[ %s ] Loaded plugin %s" % [repo, plug.name], p.debug)
 	return plugs
 
 func get_plugin(plugin_name: String) -> TrackedEditorPluginAccess:
@@ -51,7 +41,7 @@ func get_installed_plugins() -> Array[TrackedEditorPluginAccess]:
 	for plugin in plugins:
 		if plugin.is_installed():
 			installed.push_back(plugin)
-	# l.debug("[ %s ] Has installed plugins: " % repo, installed.map(func(x: TrackedEditorPluginAccess) -> String: return x.name))
+	print("[ %s ] Has installed plugins: " % repo, installed.map(func(x: TrackedEditorPluginAccess) -> String: return x.name))
 	return installed
 
 func uninstall_all_plugins() -> bool:
@@ -59,9 +49,9 @@ func uninstall_all_plugins() -> bool:
 	for plugin in get_installed_plugins():
 		var err := plugin.uninstall()
 		if err != OK:
-			l.error("Could not uninstall %s from %s" % [plugin.name, repo])
+			push_warning("Could not uninstall %s from %s" % [plugin.name, repo])
 			all_uninstalled = false
-	l.debug("[ %s ] Uninstalled plugins: " % repo)
+	print("[ %s ] Uninstalled plugins: " % repo)
 	return all_uninstalled
 
 func get_upstream_url(cached := true) -> String:
@@ -89,26 +79,22 @@ func _find_plugin_roots(allow_cached := true) -> Array[String]:
 	var commit := commit_hash(true, false)
 	var branch := branch_name(false)
 	var plugin_roots : Array[String]
-	var sw := DebugProfiler.Stopwatch.new()
 	if allow_cached and !has_changes(false):
 		if GitSubmodulePlugin.has_submodule_setting(repo, "plugin_roots"):
 			var commit_in_settings : String = GitSubmodulePlugin.get_submodule_setting(repo, "commit", "")
 			var branch_in_settings : String  = GitSubmodulePlugin.get_submodule_setting(repo, "branch", "")
 			if commit_in_settings == commit and branch_in_settings == branch:
-				l.debug("[ %s ] " % repo, "Returning plugin roots from settings")
-				sw.restart_and_log("get plugin roots for %s (from settings)" % repo, p.debug)
+				print("[ %s ] " % repo, "Returning plugin roots from settings")
 				return GitSubmodulePlugin.get_submodule_setting(repo, "plugin_roots")
 	var addons_path := source_path.path_join("addons")
 	var zip_file_path := submodules_folder.path_join(repo.replace("/", ".") + "." + commit_hash() +  ".zip")
 	var ignorer := GitArchiveIgnorer.new(source_path, zip_file_path)
-	l.debug("[ %s ] " % repo, "Finding plugin roots in filesystem...")
+	print("[ %s ] " % repo, "Finding plugin roots in filesystem...")
 	plugin_roots = _find_plugin_roots_recursive(addons_path, ignorer)
-	sw.restart_and_log("[ %s ] Find plugin roots from parsing filesystem" % repo, p.debug)
 	GitSubmodulePlugin.set_submodule_setting(repo, "commit", commit)
 	GitSubmodulePlugin.set_submodule_setting(repo, "branch", branch)
 	GitSubmodulePlugin.set_submodule_setting(repo, "plugin_roots", plugin_roots)
-	sw.restart_and_log("[ %s ] Update settings" % repo, p.debug)
-	l.debug("[ %s ] " % repo, "Found plugin roots: ", plugin_roots)
+	print("[ %s ] " % repo, "Found plugin roots: ", plugin_roots)
 	return plugin_roots
 
 func _find_plugin_roots_recursive(path: String, ignorer: GitArchiveIgnorer) -> Array[String]:
@@ -118,10 +104,10 @@ func _find_plugin_roots_recursive(path: String, ignorer: GitArchiveIgnorer) -> A
 	# TODO might have to change or move into GitArchiveIgnorer if using another ignorer
 	var ignorer_trim_path_prefix := source_path + "/"
 	if ignorer.ignores_path(path.replace(ignorer_trim_path_prefix, "") + "/"):
-		l.debug("Path %s ignored by ignorer" % path.replace(ignorer_trim_path_prefix, "") + "/")
+		print("Path %s ignored by ignorer" % path.replace(ignorer_trim_path_prefix, "") + "/")
 		return []
 	dir.include_hidden = true
-	l.debug("[ %s ] " % repo, "Finding plugin roots in ", path)
+	print("[ %s ] " % repo, "Finding plugin roots in ", path)
 	for file in dir.get_files():
 		if file.ends_with(".gdignore"):
 			return []
@@ -133,7 +119,7 @@ func _find_plugin_roots_recursive(path: String, ignorer: GitArchiveIgnorer) -> A
 	return cfg_paths
 
 func remove() -> Error:
-	l.debug("Removing '%s'" % repo)
+	print("Removing '%s'" % repo)
 	if !uninstall_all_plugins():
 		push_error("Could not uninstall %s" % repo)
 		return FAILED
@@ -275,7 +261,7 @@ static func add_submodule(
 	_bare: bool = false,
 	output: Array[String] = []
 ) -> Error:
-	l.info("Cloning %s from %s" % [p_repo, upstream_url])
+	print("Cloning %s from %s" % [p_repo, upstream_url])
 	var err : Error
 	var os_err : int
 	var author_name := p_repo.get_slice("/", 0)
@@ -302,7 +288,7 @@ static func add_submodule(
 		# TODO cleanup files
 		push_error(output)
 		return FAILED
-	l.info("Added submodule %s" % p_repo)
+	print("Added submodule %s" % p_repo)
 	return err
 
 func checkout(
@@ -311,13 +297,13 @@ func checkout(
 	output: Array[String] = []
 ) -> Error:
 	var checkout_string := branch if commit.is_empty() else commit
-	l.info("[ %s ] Checking out %s" % [repo, checkout_string])
+	print("[ %s ] Checking out %s" % [repo, checkout_string])
 	var git_cmd := "git checkout %s" % checkout_string
 	var os_err := _execute_at(source_path, git_cmd, output)
 	if os_err != OK:
 		push_error(output)
 		return FAILED
-	l.info("[ %s ] Checked out %s" % [repo, checkout_string])
+	print("[ %s ] Checked out %s" % [repo, checkout_string])
 	return OK
 
 func create_new_plugin_project(output : Array[String] = []) -> int:
@@ -373,14 +359,12 @@ func create_new_plugin_project(output : Array[String] = []) -> int:
 static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
 	var os_cmd := 'cd \"%s\" && %s' % [path, cmd]
-	l.debug("Executing...\n" + os_cmd)
-	var sw := DebugProfiler.Stopwatch.new()
+	print("Executing...\n" + os_cmd)
 	var err := OS.execute(
 		"$SHELL",
 		["-lc", os_cmd],
 		output,
 		true)
-	sw.restart_and_log("execute '%s'" % cmd, p.debug)
 	return err
 
 static func github_upstream_url(p_repo: String) -> String:
@@ -411,8 +395,8 @@ var PLUGIN_GD_CONTENTS := """
 extends EditorPlugin
 
 func _enter_tree() -> void:
-  pass
+	pass
 
 func _exit_tree() -> void:
-  pass
+	pass
 """

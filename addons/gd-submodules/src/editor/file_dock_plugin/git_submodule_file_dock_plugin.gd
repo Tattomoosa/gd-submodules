@@ -1,14 +1,6 @@
 @tool
 extends Control
 
-const L := preload("../../util/logger.gd")
-static var l: L.Logger:
-	get: return L.get_logger(L.LogLevel.INFO, "GitSubmoduleFileDockPlugin")
-const DebugProfiler := preload("../../util/profiler.gd")
-static var p: L.Logger:
-	get: return L.get_logger(L.LogLevel.WARN, "Profiler:GitSubmoduleFileDockPlugin")
-
-const PRINT_DEBUG_MESSAGES := false
 const DEBUG_CLASS_NAME := "GitSubmoduleFileDockPlugin"
 const FADE_COLOR := Color(1, 1, 1, 0.5)
 const UNINSTALLED_COLOR := Color(1, 1, 1, 0.2)
@@ -35,7 +27,7 @@ var changes_icon : Texture2D
 
 @warning_ignore("return_value_discarded")
 func initialize() -> void:
-	l.debug("Initializing GitSubmoduleFileDockPlugin")
+	print("Initializing GitSubmoduleFileDockPlugin")
 	# TODO Resize source icon to 16x16
 	git_icon = _resize_icon(GIT_ICON.get_image())
 	# TODO placeholder, need better git status icons
@@ -46,7 +38,7 @@ func initialize() -> void:
 	if !file_tree:
 		push_error(DEBUG_CLASS_NAME, " file tree not found.")
 	if !file_tree.is_node_ready():
-		l.debug("Awaiting file tree.ready")
+		# print("Awaiting file tree.ready")
 		await file_tree.ready
 	patch_dock()
 	EditorInterface.get_resource_filesystem().filesystem_changed.connect(patch_dock)
@@ -106,39 +98,30 @@ func _on_file_dock_gui_input(event: InputEvent) -> void:
 # Patch file dock with git plugin information
 @warning_ignore("return_value_discarded")
 func patch_dock() -> void:
-	l.debug("Patching file dock")
 	if !active:
-		l.debug("Aborted patching file dock - not active")
+		# print("Aborted patching file dock - not active")
 		return
 
-	var stopwatch := DebugProfiler.Stopwatch.new()
 	var root := file_tree.get_root()
 	var addons_item : TreeItem = _parse_file_tree_depth_first(root, "addons")
 	if !addons_item:
-		l.debug("res://addons not found!")
+		# push_warning("res://addons not found!")
 		return
 	var addon_item := addons_item.get_first_child()
-	stopwatch.restart_and_log("find the addons folder item in the file tree dock", p.debug)
 	var submodules := GitSubmodulePlugin.get_tracked_submodules()
 	var installed_plugins := {}
 	for sm in submodules:
 		for installed_plugin in sm.get_installed_plugins():
 			# l.debug("Found installed plugin: ", installed_plugin.name)
 			installed_plugins[installed_plugin.name] = {"plugin": installed_plugin, "submodule": sm}
-	l.debug("Found installed plugins: ", installed_plugins.keys())
-	stopwatch.restart_and_log("load submodules", p.debug)
+	# print("Found installed plugins: ", installed_plugins.keys())
 
 	if installed_plugins.is_empty():
-		l.debug("Empty addon paths")
+		# print("Empty addon paths")
 		return
-	stopwatch.restart()
-	var sw := DebugProfiler.Stopwatch.new()
 	while addon_item != null:
 		_patch_addon_folder_item(addon_item, installed_plugins)
-		sw.restart_and_log("patch %s" % addon_item.get_text(0), p.debug)
 		addon_item = addon_item.get_next()
-	l.debug("Finished patching file dock")
-	stopwatch.restart_and_log("patch folder items", p.info)
 
 # Patch file dock's tree item with git plugin information
 @warning_ignore("return_value_discarded")
@@ -184,7 +167,7 @@ func _patch_addon_folder_item(folder_item: TreeItem, installed_plugins: Dictiona
 
 # Modify a folder item with our patch
 func _patch_folder_modify_item(folder_item: TreeItem, data: Dictionary) -> void:
-	l.debug("Modifying folder item: " + folder_item.get_text(0))
+	# print("Modifying folder item: " + folder_item.get_text(0))
 	var icon := plugin_icon
 	folder_item.set_icon(0, icon)
 

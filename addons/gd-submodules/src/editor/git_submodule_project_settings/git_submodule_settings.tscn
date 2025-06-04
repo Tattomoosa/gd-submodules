@@ -5,9 +5,9 @@
 [ext_resource type="Script" uid="uid://dojcoasyr5666" path="res://addons/gd-submodules/src/editor/git_submodule_tree.gd" id="2_ky04e"]
 [ext_resource type="Script" uid="uid://bl65b4qjnbb0m" path="res://addons/gd-submodules/src/editor/git_submodule_project_settings/git_submodule_plugin_more_actions_menu.gd" id="2_s1ddx"]
 [ext_resource type="Script" uid="uid://cb82y1vif1vbp" path="res://addons/gd-submodules/src/editor/common_controls/loading_indicator.gd" id="3_8o1t1"]
-[ext_resource type="PackedScene" uid="uid://pegon4ube686" path="res://addons/gd-submodules/src/editor/popups/git_submodule_add_repo_popup_panel.tscn" id="4_33a7x"]
-[ext_resource type="PackedScene" uid="uid://ixlfxed7bmyi" path="res://addons/gd-submodules/src/editor/popups/git_submodule_new_repo_popup_panel.tscn" id="5_buwbv"]
-[ext_resource type="PackedScene" uid="uid://dxf7cih2l4btw" path="res://addons/gd-submodules/src/editor/popups/git_submodule_edit_repo_popup.tscn" id="7_pqfyb"]
+[ext_resource type="PackedScene" uid="uid://pegon4ube686" path="res://addons/gd-submodules/src/editor/popups/add_remote/git_submodule_add_repo_popup_panel.tscn" id="4_33a7x"]
+[ext_resource type="PackedScene" uid="uid://ixlfxed7bmyi" path="res://addons/gd-submodules/src/editor/popups/new_repo/git_submodule_new_repo_popup_panel.tscn" id="5_buwbv"]
+[ext_resource type="PackedScene" uid="uid://dxf7cih2l4btw" path="res://addons/gd-submodules/src/editor/popups/edit_repo/git_submodule_edit_repo_popup.tscn" id="7_pqfyb"]
 
 [sub_resource type="Image" id="Image_l54iu"]
 data = {

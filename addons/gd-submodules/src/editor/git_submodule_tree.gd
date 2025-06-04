@@ -6,14 +6,6 @@ const GitSubmodulePlugin := preload("../git_submodule_plugin.gd")
 const GitSubmoduleAccess := GitSubmodulePlugin.GitSubmoduleAccess
 const TrackedEditorPluginAccess := GitSubmodulePlugin.TrackedEditorPluginAccess
 
-# Logger
-const L := preload("../util/logger.gd")
-const DebugProfiler := preload("../util/profiler.gd")
-static var l: L.Logger:
-	get: return L.get_logger(L.LogLevel.INFO, "GitSubmoduleSettingsTree")
-static var p: L.Logger:
-	get: return L.get_logger(L.LogLevel.WARN, "Profiler:GitSubmoduleSettingsTree")
-
 const REPO_CHANGES_ICON := preload("../../icons/GitChanges.svg")
 
 signal working
@@ -66,9 +58,7 @@ var submodules : Array[GitSubmoduleAccess]
 var _currently_deleting : GitSubmoduleAccess = null
 
 func reset() -> void:
-	l.debug("Tree reloading...")
 	if !is_visible_in_tree():
-		l.debug("Tree not visible. Cancelled reload.")
 		return
 	await _set_working()
 	for child in get_root().get_children():
@@ -76,7 +66,6 @@ func reset() -> void:
 	submodules.clear()
 	build()
 	_set_finished()
-	l.debug("Tree reloaded")
 
 # hard reset, tells plugin to reload all data
 func reset_git_submodule_plugin() -> void:
@@ -85,28 +74,24 @@ func reset_git_submodule_plugin() -> void:
 	reset()
 
 func build() -> void:
-	var stopwatch := DebugProfiler.Stopwatch.new()
 	var root := get_root()
 	var tracked_submodules := GitSubmodulePlugin.get_tracked_submodules()
 	for submodule in tracked_submodules:
-		var sw := DebugProfiler.Stopwatch.new()
 		submodules.push_back(submodule)
 		var item := root.create_child()
 		item.collapsed = true
 		item.set_metadata(0, submodule)
 		_build_submodule_tree_item(item)
-		sw.restart_and_log("build submodule tree item for %s" % submodule.repo, p.debug)
-	stopwatch.restart_and_log("build submodule tree", p.info)
 
 func _confirmation_dialog_cancel() -> void:
 	_currently_deleting = null
 	reset()
 
 func _confirmation_dialog_confirm() -> void:
-	l.print("Removing %s..." % _currently_deleting.repo)
+	print("Removing %s..." % _currently_deleting.repo)
 	var err := _currently_deleting.remove()
-	if err != OK: l.error("FAILED: " + error_string(err))
-	else: l.debug("OK")
+	if err != OK: push_error("FAILED: " + error_string(err))
+	else: print("OK")
 	reset()
 
 @warning_ignore("return_value_discarded")
@@ -202,17 +187,17 @@ func _button_clicked(item: TreeItem, col: int, id: int, mouse_button_index: int)
 						flags = flags.format({"directory": ProjectSettings.globalize_path(sm.source_path)})
 						var os_err := OS.create_process(terminal, flags.split(" "))
 						if os_err < 0:
-							l.error("Could not open terminal '%s %s'" % [terminal, flags])
+							push_error("Could not open terminal '%s %s'" % [terminal, flags])
 			return
 		_:
 			push_error("What button at %s?" % col)
 
 func _on_visibility_changed() -> void:
 	if !is_visible_in_tree():
-		l.debug("Visibility changed to false, doing nothing.")
+		# l.debug("Visibility changed to false, doing nothing.")
 		return
 	if visible:
-		l.debug("Visibility changed to true, triggering reset")
+		# l.debug("Visibility changed to true, triggering reset")
 		reset()
 	# var root := get_root()
 	# if !root:
@@ -230,7 +215,6 @@ func _set_finished() -> void:
 	finished.emit()
 
 func _item_edited() -> void:
-	l.debug("Tree item edited")
 	var item := get_selected()
 	var col := get_selected_column()
 	var data : Variant = item.get_metadata(0)
@@ -259,32 +243,24 @@ func _item_edited() -> void:
 			Column.LINKED:
 				var indeterminate := _is_in_project_indeterminate(submodule)
 				if indeterminate:
-					l.debug("INDETERMINATE - setting checked false")
 					checked = false
 				item.set_checked(col, checked)
 				if checked:
-					l.debug("Installing all plugins in %s..." % submodule.repo)
-					var success := submodule.install_all_plugins()
-					if success: l.debug("OK");
-					else: l.debug("FAILURE");
+					print("Installing all plugins in %s..." % submodule.repo)
+					submodule.install_all_plugins()
 				else:
-					l.debug("Uninstalling all plugins in %s..." % submodule.repo)
-					var success := submodule.uninstall_all_plugins()
-					if success: l.debug("OK");
-					else: l.debug("FAILURE");
+					print("Uninstalling all plugins in %s..." % submodule.repo)
+					submodule.uninstall_all_plugins()
 				EditorInterface.get_resource_filesystem().scan()
 			Column.ACTIVE:
 				var indeterminate := _is_enabled_indeterminate(submodule)
 				if indeterminate:
-					l.debug("INDETERMINATE - setting checked false")
 					checked = false
 				item.set_checked(col, checked)
 				for plugin in submodule.plugins:
 					if checked:
-						l.debug("Enabling %s..." % plugin.name)
 						plugin.enable()
 					else:
-						l.debug("Disabling %s..." % plugin.name)
 						plugin.disable()
 		_update_submodule_checks.call_deferred(item)
 
@@ -296,18 +272,11 @@ func _item_edited() -> void:
 		match col:
 			Column.LINKED:
 				if checked:
-					l.debug("Installing plugin %s..." % plugin.name)
 					var err := plugin.install()
-					if err != OK: l.debug("Failed")
-					else: l.debug("OK")
 				else:
-					l.debug("Uninstalling plugin %s..." % plugin.name)
 					var err := plugin.uninstall()
-					if err != OK: l.debug("Failed")
-					else: l.debug("OK")
 				EditorInterface.get_resource_filesystem().scan()
 			Column.ACTIVE:
-				l.debug("Enabling %s..." % plugin.name)
 				plugin.set_enabled(checked)
 		_update_submodule_checks.call_deferred(item.get_parent())
 
@@ -322,8 +291,8 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 	item.set_selectable(c, false)
 	item.set_cell_mode(c, TreeItem.CELL_MODE_CUSTOM)
 
-	# var icon_scale := int(16 * EditorInterface.get_editor_scale())
-	var icon_scale := 16
+	var icon_scale := int(16 * EditorInterface.get_editor_scale())
+	# var icon_scale := 16
 	for c_i: int in [Column.TRACKED, Column.LINKED, Column.ACTIVE]:
 		item.set_cell_mode(c_i, TreeItem.CELL_MODE_CHECK)
 		item.set_text_alignment(c, HORIZONTAL_ALIGNMENT_CENTER)
@@ -441,7 +410,6 @@ func _build_submodule_tree_item(item: TreeItem) -> void:
 @warning_ignore("narrowing_conversion")
 func _update_submodule_checks(item: TreeItem) -> void:
 	var submodule : GitSubmoduleAccess = item.get_metadata(0)
-	# var submodule_plugins := submodule.find_submodule_plugin_roots()
 	var submodule_enabled_plugins := submodule.get_enabled_plugins()
 	var is_tracked := submodule.is_tracked()
 	var has_installed := submodule.has_plugin_installed()
@@ -519,7 +487,7 @@ func _update_submodule_checks(item: TreeItem) -> void:
 		# print("%s is_installed? %s is_enabled? %s" % [plugin.name, is_installed, is_enabled])
 		c = Column.LINKED
 		plugin_item.set_checked(c, is_installed)
-		# if submodule.has_plugin_installed():
+
 		if plugin.is_installed():
 			plugin_item.set_icon_modulate(c, CHECKED_ICON_COLOR)
 			plugin_item.set_tooltip_text(c, "Installed in project")

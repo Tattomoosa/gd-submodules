@@ -1,14 +1,6 @@
 extends RefCounted
 
 const GitIgnorer := preload("./git_ignorer.gd")
-const DebugProfiler := preload("../util/profiler.gd")
-
-# Logger
-const L := preload("../util/logger.gd")
-static var l: L.Logger:
-	get: return L.get_logger(L.LogLevel.INFO, "GitIgnorer")
-static var p: L.Logger:
-	get: return L.get_logger(L.LogLevel.WARN, "Profiler:GitIgnorer")
 
 var root_path : String = "/"
 
@@ -17,7 +9,6 @@ func ignores_path(_path: String) -> bool:
 
 static func _execute_at(path: String, cmd: String, output: Array[String] = []) -> int:
 	path = ProjectSettings.globalize_path(path)
-	l.debug("Executing: " + 'cd \"%s\" && \"%s\"' % [path, cmd])
 	return OS.execute(
 		"$SHELL",
 		["-lc", 'cd \"%s\" && %s' % [path, cmd]],
@@ -37,17 +28,14 @@ class GitArchiveIgnorer extends GitIgnorer:
 		repo_path = path
 		zip_file_path = p_zip_file_path
 		if only_read:
-			l.debug("Using cached zip archive of %s at %s" % [path, zip_file_path])
+			print("Using cached zip archive of %s at %s" % [path, zip_file_path])
 			if !DirAccess.dir_exists_absolute(zip_file_path):
 				only_read = false
-				l.debug("Cached zip archive not found")
+				print("Cached zip archive not found")
 		if !only_read:
-			var sw := DebugProfiler.Stopwatch.new()
-			l.debug("Creating zip archive of %s at %s" % [path, zip_file_path])
+			print("Creating zip archive of %s at %s" % [path, zip_file_path])
 			var output : Array[String] = []
 			var os_err := _execute_at(path, "git archive --format=zip --output \"%s\" HEAD" % ProjectSettings.globalize_path(zip_file_path), output)
-			# p.print("Took %sms to create zip archive" % sw.restart())
-			sw.restart_and_log("create zip archive", p.info)
 			if os_err != OK:
 				error_creating_archive_allow_all = true
 				return
@@ -71,9 +59,9 @@ class GitArchiveIgnorer extends GitIgnorer:
 			NOTIFICATION_PREDELETE:
 				var err := DirAccess.remove_absolute(zip_file_path)
 				if err == OK:
-					l.debug("Removed zip archive at ", zip_file_path)
+					print("Removed zip archive at ", zip_file_path)
 				else:
-					l.warn("Could not remove zip archive at ", zip_file_path)
+					push_warning("Could not remove zip archive at ", zip_file_path)
 
 # TODO this doesn't work at all...
 # based on: https://github.com/mherrmann/gitignore_parser/blob/master/gitignore_parser.py
