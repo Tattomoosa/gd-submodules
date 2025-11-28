@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://bvgtcedia500d"]
+[gd_scene load_steps=11 format=3 uid="uid://bvgtcedia500d"]
 
 [ext_resource type="Script" uid="uid://dmib2y5c80gfg" path="res://addons/gd-submodules/src/editor/theme_icon_button.gd" id="1_mx6dm"]
 [ext_resource type="Texture2D" uid="uid://bfqng353o28c8" path="res://addons/gd-submodules/icons/GitPlugin.svg" id="1_tb6n2"]
@@ -9,17 +9,15 @@
 [ext_resource type="PackedScene" uid="uid://ixlfxed7bmyi" path="res://addons/gd-submodules/src/editor/popups/new_repo/git_submodule_new_repo_popup_panel.tscn" id="5_buwbv"]
 [ext_resource type="PackedScene" uid="uid://dxf7cih2l4btw" path="res://addons/gd-submodules/src/editor/popups/edit_repo/git_submodule_edit_repo_popup.tscn" id="7_pqfyb"]
 
-[sub_resource type="Image" id="Image_l54iu"]
-data = {
-"data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 226, 226, 226, 69, 224, 224, 224, 222, 224, 224, 224, 221, 225, 225, 225, 68, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 224, 224, 224, 222, 224, 224, 224, 255, 224, 224, 224, 255, 224, 224, 224, 219, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 224, 224, 224, 222, 224, 224, 224, 255, 224, 224, 224, 255, 224, 224, 224, 217, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 225, 225, 225, 68, 224, 224, 224, 220, 224, 224, 224, 220, 227, 227, 227, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 226, 226, 226, 69, 224, 224, 224, 222, 224, 224, 224, 221, 225, 225, 225, 68, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 224, 224, 224, 222, 224, 224, 224, 255, 224, 224, 224, 255, 224, 224, 224, 219, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 224, 224, 224, 222, 224, 224, 224, 255, 224, 224, 224, 255, 224, 224, 224, 217, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 225, 225, 225, 68, 224, 224, 224, 220, 224, 224, 224, 220, 224, 224, 224, 65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 226, 226, 226, 69, 224, 224, 224, 222, 224, 224, 224, 220, 224, 224, 224, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 224, 224, 224, 222, 224, 224, 224, 255, 224, 224, 224, 255, 224, 224, 224, 218, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 224, 224, 224, 222, 224, 224, 224, 255, 224, 224, 224, 255, 224, 224, 224, 217, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 225, 225, 225, 68, 224, 224, 224, 220, 224, 224, 224, 220, 224, 224, 224, 65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-"format": "RGBA8",
-"height": 16,
-"mipmaps": false,
-"width": 16
+[sub_resource type="DPITexture" id="DPITexture_k1ivu"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\"><path fill=\"#e0e0e0\" d=\"M8 0a2 2 0 0 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 0 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 0 0 0 4 2 2 0 0 0 0-4z\"/></svg>
+"
+base_scale = 2.0
+color_map = {
+Color(1, 0.37254903, 0.37254903, 1): Color(1, 0.47, 0.42, 1),
+Color(0.37254903, 1, 0.5921569, 1): Color(0.45, 0.95, 0.5, 1),
+Color(1, 0.8666667, 0.39607844, 1): Color(1, 0.87, 0.4, 1)
 }
-
-[sub_resource type="ImageTexture" id="ImageTexture_8ubpa"]
-image = SubResource("Image_l54iu")
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_68foq"]
 bg_color = Color(0, 0, 0, 0.482353)
@@ -89,7 +87,7 @@ icon_name = "Add"
 
 [node name="MoreActionsMenu" type="MenuButton" parent="VBoxContainer/PanelContainer/HBoxContainer"]
 layout_mode = 2
-icon = SubResource("ImageTexture_8ubpa")
+icon = SubResource("DPITexture_k1ivu")
 item_count = 3
 popup/item_0/text = "Import Local (TODO)"
 popup/item_0/id = 2
@@ -107,10 +105,10 @@ size_flags_vertical = 3
 [node name="Tree" type="Tree" parent="VBoxContainer/TreePanel" node_paths=PackedStringArray("confirmation_dialog")]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/inner_item_margin_right = 0
-theme_override_constants/item_margin = 20
-theme_override_constants/draw_guides = 1
 theme_override_constants/draw_relationship_lines = 0
+theme_override_constants/draw_guides = 1
+theme_override_constants/item_margin = 20
+theme_override_constants/inner_item_margin_right = 0
 columns = 8
 column_titles_visible = true
 hide_root = true
@@ -130,14 +128,17 @@ script = ExtResource("3_8o1t1")
 initial_position = 2
 
 [node name="ConfirmationDialog" type="ConfirmationDialog" parent="."]
+oversampling_override = 1.0
 title = "Delete files?"
 initial_position = 2
 size = Vector2i(568, 214)
 force_native = true
+auto_translate = false
 dialog_text = "This action will remove {repo} from the filesystem."
 dialog_autowrap = true
 
 [node name="GitSubmoduleEditRepoPopup" parent="." instance=ExtResource("7_pqfyb")]
+auto_translate = false
 
 [connection signal="pressed" from="VBoxContainer/PanelContainer/HBoxContainer/RefreshButton" to="VBoxContainer/TreePanel/Tree" method="reset_git_submodule_plugin"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer/HBoxContainer/AddButton" to="AddRemotePopupPanel" method="show"]

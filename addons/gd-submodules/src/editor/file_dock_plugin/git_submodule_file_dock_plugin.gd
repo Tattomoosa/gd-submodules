@@ -196,11 +196,14 @@ func _patch_folder_modify_item(folder_item: TreeItem, data: Dictionary) -> void:
 func _find_file_tree() -> Tree:
 	if !is_instance_valid(file_system_dock):
 		file_system_dock = EditorInterface.get_file_system_dock()
+	file_system_dock.print_tree_pretty()
 	for c0 in file_system_dock.get_children():
-		if c0 is SplitContainer:
+		if c0 is VBoxContainer:
 			for c1 in c0.get_children():
-				if c1 is Tree:
-					return c1
+				if c1 is SplitContainer:
+					for c2 in c1.get_children():
+						if c2 is Tree:
+							return c2
 	return null
 
 # Find a file/directory with name
